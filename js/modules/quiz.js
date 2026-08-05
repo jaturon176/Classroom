@@ -8,14 +8,24 @@
  * - Real-Time Countdown Timer & Instant Auto-Grading.
  */
 
-import { firebaseService } from '../services/firebaseService.js';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
+import { firebaseService } from '../services/firebaseService.js?v=2.5';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=2.5';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=2.5';
 
 export class QuizModule {
   constructor(rbac) {
     this.rbac = rbac;
     this.quizTimer = null;
+
+    // Listen for 0.1s Cloud Realtime Database updates across all devices
+    window.addEventListener('ag_realtime_update', (e) => {
+      if (e.detail && (e.detail.collection === 'quizzes' || e.detail.collection === 'courses')) {
+        const activeContainer = document.getElementById('app-content');
+        if (activeContainer && window.app && window.app.activeTab === 'quiz') {
+          this.render(activeContainer);
+        }
+      }
+    });
   }
 
   render(containerEl) {

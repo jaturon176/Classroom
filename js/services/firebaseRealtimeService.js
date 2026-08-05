@@ -7,7 +7,7 @@
  * Architecture:
  * 1. 🌐 Central Primary Server (Single Source of Truth):
  *    - All devices (PC, iPad, iPhone, Android) connect directly to Firebase Realtime Database Singapore Node.
- *    - Real-time websocket subscription (`onValue`) syncs any mutation to all connected devices within 0.1s.
+ *    - Real-time websocket subscription (`onValue`) syncs any mutation (add/edit/delete) to all connected devices within 0.1s.
  * 2. 📱 LocalStorage (Offline Backup & Fast Startup Cache):
  *    - Pre-seeded fallback dataset ensuring instant 0ms app start.
  */
@@ -35,12 +35,12 @@ class FirebaseRealtimeService {
   }
 
   initLocalStoreFallback() {
-    if (!localStorage.getItem('ag_users')) localStorage.setItem('ag_users', JSON.stringify(INITIAL_USERS));
-    if (!localStorage.getItem('ag_courses')) localStorage.setItem('ag_courses', JSON.stringify(INITIAL_COURSES));
-    if (!localStorage.getItem('ag_homework')) localStorage.setItem('ag_homework', JSON.stringify(INITIAL_HOMEWORK));
-    if (!localStorage.getItem('ag_quizzes')) localStorage.setItem('ag_quizzes', JSON.stringify([SAMPLE_QUIZ]));
-    if (!localStorage.getItem('ag_announcements')) localStorage.setItem('ag_announcements', JSON.stringify(INITIAL_ANNOUNCEMENTS));
-    if (!localStorage.getItem('ag_attendance')) localStorage.setItem('ag_attendance', JSON.stringify(INITIAL_ATTENDANCE));
+    if (localStorage.getItem('ag_users') === null) localStorage.setItem('ag_users', JSON.stringify(INITIAL_USERS));
+    if (localStorage.getItem('ag_courses') === null) localStorage.setItem('ag_courses', JSON.stringify(INITIAL_COURSES));
+    if (localStorage.getItem('ag_homework') === null) localStorage.setItem('ag_homework', JSON.stringify(INITIAL_HOMEWORK));
+    if (localStorage.getItem('ag_quizzes') === null) localStorage.setItem('ag_quizzes', JSON.stringify([SAMPLE_QUIZ]));
+    if (localStorage.getItem('ag_announcements') === null) localStorage.setItem('ag_announcements', JSON.stringify(INITIAL_ANNOUNCEMENTS));
+    if (localStorage.getItem('ag_attendance') === null) localStorage.setItem('ag_attendance', JSON.stringify(INITIAL_ATTENDANCE));
   }
 
   // 🌐 Initialize Central Firebase Realtime Database & Setup 0.1s Cross-Device Sync
@@ -71,15 +71,13 @@ class FirebaseRealtimeService {
             }
           }
 
-          if (itemsArray.length > 0) {
-            // Overwrite local cache with Central Primary Server Data
-            localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
-            
-            // Broadcast live update to refresh active UI across all connected devices
-            window.dispatchEvent(new CustomEvent('ag_realtime_update', {
-              detail: { collection: key, items: itemsArray }
-            }));
-          }
+          // Always overwrite local cache with Central Primary Server Data (including empty array after deletes)
+          localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
+          
+          // Broadcast live update to refresh active UI across all connected devices
+          window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+            detail: { collection: key, items: itemsArray }
+          }));
         });
       });
     } catch (err) {
@@ -120,17 +118,19 @@ class FirebaseRealtimeService {
 
   // 📱 Read Collection (Reads from Central Server Data Cache with Mojibake Repair)
   getCollection(key) {
-    const raw = localStorage.getItem('ag_' + key) || '[]';
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.length > 0) {
-        return autoFixObjectMojibake(parsed);
+    const raw = localStorage.getItem('ag_' + key);
+    if (raw !== null) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return autoFixObjectMojibake(parsed);
+        }
+      } catch (e) {
+        // Fallback
       }
-    } catch (e) {
-      // Fallback
     }
 
-    // Fallback to initial seed if empty
+    // Fallback to initial seed dataset only if key NEVER existed in localStorage
     if (key === 'users') return INITIAL_USERS;
     if (key === 'courses') return INITIAL_COURSES;
     if (key === 'homework') return INITIAL_HOMEWORK;
@@ -159,6 +159,11 @@ class FirebaseRealtimeService {
     items.unshift(newItem);
     localStorage.setItem('ag_' + collectionKey, JSON.stringify(items));
 
+    // Broadcast local addition immediately
+    window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+      detail: { collection: collectionKey, items: items }
+    }));
+
     // Push to Central Server immediately
     if (this.isRealtimeConnected && this.db) {
       const itemRef = ref(this.db, `${collectionKey}/${newItem.id}`);
@@ -175,6 +180,11 @@ class FirebaseRealtimeService {
       items[index] = { ...items[index], ...updates };
       localStorage.setItem('ag_' + collectionKey, JSON.stringify(items));
 
+      // Broadcast local update immediately
+      window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+        detail: { collection: collectionKey, items: items }
+      }));
+
       if (this.isRealtimeConnected && this.db) {
         const itemRef = ref(this.db, `${collectionKey}/${id}`);
         await update(itemRef, updates).catch(err => console.warn('Central server updateItem error:', err));
@@ -189,6 +199,11 @@ class FirebaseRealtimeService {
     let items = this.getCollection(collectionKey);
     items = items.filter(x => x.id !== id);
     localStorage.setItem('ag_' + collectionKey, JSON.stringify(items));
+
+    // Broadcast local deletion immediately so UI updates in 0ms across device
+    window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+      detail: { collection: collectionKey, items: items }
+    }));
 
     if (this.isRealtimeConnected && this.db) {
       const itemRef = ref(this.db, `${collectionKey}/${id}`);
