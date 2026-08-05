@@ -8,9 +8,9 @@
  * - Real-Time Countdown Timer & Instant Auto-Grading.
  */
 
-import { firebaseService } from '../services/firebaseService.js?v=2.5';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=2.5';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=2.5';
+import { firebaseService } from '../services/firebaseService.js?v=4.0';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=4.0';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=4.0';
 
 export class QuizModule {
   constructor(rbac) {
@@ -26,6 +26,25 @@ export class QuizModule {
         }
       }
     });
+  }
+
+  // Deep sanitize object for Firebase DB (Ensures no undefined values cause set() crashes)
+  sanitizeForFirebase(obj) {
+    if (obj === undefined) return '';
+    if (obj === null) return '';
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sanitizeForFirebase(item));
+    }
+    if (typeof obj === 'object') {
+      const clean = {};
+      for (const k in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, k)) {
+          clean[k] = this.sanitizeForFirebase(obj[k]);
+        }
+      }
+      return clean;
+    }
+    return obj;
   }
 
   render(containerEl) {
@@ -338,7 +357,7 @@ export class QuizModule {
 
     const modalHTML = `
       <div id="quiz-editor-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-        <div class="glass-card w-full max-w-3xl p-6 md:p-8 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] overflow-y-auto">
+        <div id="quiz-modal-scroll" class="glass-card w-full max-w-3xl p-6 md:p-8 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] overflow-y-auto">
           <div class="flex justify-between items-center pb-4 border-b border-slate-100">
             <h3 class="text-xl font-bold text-slate-900 font-heading flex items-center gap-2">
               <span>${isEdit ? '✏️ แก้ไขแบบทดสอบ' : `➕ สร้างแบบทดสอบใหม่ (แบบ ${optionCount} ตัวเลือก)`}</span>
@@ -350,14 +369,14 @@ export class QuizModule {
             <!-- Quiz Info -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อชุดแบบทดสอบ</label>
-                <input type="text" id="qz-title" value="${isEdit ? quiz.title : ''}" required class="input-field" placeholder="เช่น แบบทดสอบวัดผลสัมฤทธิ์วิชาวิทยาศาสตร์ ม.1">
+                <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อชุดแบบทดสอบ <span class="text-rose-500">*</span></label>
+                <input type="text" id="qz-title" value="${isEdit ? quiz.title : ''}" required class="input-field" placeholder="เช่น แบบทดสอบวิทยาศาสตร์ ม.1">
               </div>
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">รายวิชา</label>
                 <select id="qz-course" class="input-field">
-                  ${courses.map(c => `<option value="${c.id}" ${isEdit && quiz.courseId === c.id ? 'selected' : ''}>${c.code} - ${c.name}</option>`).join('')}
+                  ${courses.length > 0 ? courses.map(c => `<option value="${c.id}" ${isEdit && quiz.courseId === c.id ? 'selected' : ''}>${c.code || ''} - ${c.name}</option>`).join('') : '<option value="general">ทั่วไป</option>'}
                 </select>
               </div>
 
@@ -395,6 +414,7 @@ export class QuizModule {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     const modalEl = document.getElementById('quiz-editor-modal');
+    const scrollContainer = modalEl.querySelector('#quiz-modal-scroll');
     const container = modalEl.querySelector('#questions-container');
 
     const renderQuestions = () => {
@@ -417,7 +437,7 @@ export class QuizModule {
 
           <!-- Question Text & Question Image Upload -->
           <div class="space-y-2">
-            <label class="block text-xs font-semibold text-slate-700">โจทย์คำถาม</label>
+            <label class="block text-xs font-semibold text-slate-700">โจทย์คำถาม <span class="text-rose-500">*</span></label>
             <input type="text" data-q-idx="${idx}" class="q-text-input input-field text-xs" value="${q.questionText || ''}" required placeholder="พิมพ์โจทย์คำถามที่นี่...">
             
             <!-- Image Attachment for Question -->
@@ -522,58 +542,89 @@ export class QuizModule {
     modalEl.querySelector('#quiz-editor-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Collect updated questions values
-      const updatedQuestions = questions.map((q, idx) => {
-        const qText = container.querySelector(`.q-text-input[data-q-idx="${idx}"]`).value.trim();
-        const points = parseInt(container.querySelector(`.q-points-input[data-q-idx="${idx}"]`).value, 10) || 1;
-        const qImgUrl = container.querySelector(`.q-img-url-input[data-q-idx="${idx}"]`).value.trim();
-        const radio = container.querySelector(`input[name="correct_${idx}"]:checked`);
-        const correctAnswer = radio ? parseInt(radio.value, 10) : 0;
+      try {
+        const titleVal = (document.getElementById('qz-title')?.value || '').trim();
+        if (!titleVal) {
+          if (scrollContainer) scrollContainer.scrollTop = 0;
+          await showAlertModal({ title: '⚠️ กรอกชื่อแบบทดสอบ', message: 'กรุณาระบุ "ชื่อชุดแบบทดสอบ" ก่อนบันทึก' });
+          return;
+        }
 
-        const optInputs = container.querySelectorAll(`.q-opt-input[data-q-idx="${idx}"]`);
-        const options = Array.from(optInputs).map(i => i.value.trim());
+        // Collect updated questions values safely
+        const updatedQuestions = questions.map((q, idx) => {
+          const qTextEl = container.querySelector(`.q-text-input[data-q-idx="${idx}"]`);
+          const qText = qTextEl ? qTextEl.value.trim() : (q.questionText || '');
 
-        const optionImages = options.map((_, oIdx) => {
-          const inp = container.querySelector(`.opt-img-url-input[data-opt-img-url="${idx}_${oIdx}"]`);
-          return inp ? inp.value.trim() : (q.optionImages ? q.optionImages[oIdx] : '');
+          const pointsEl = container.querySelector(`.q-points-input[data-q-idx="${idx}"]`);
+          const points = pointsEl ? (parseInt(pointsEl.value, 10) || 1) : (q.points || 1);
+
+          const qImgUrlEl = container.querySelector(`.q-img-url-input[data-q-idx="${idx}"]`);
+          const qImgUrl = qImgUrlEl ? qImgUrlEl.value.trim() : '';
+
+          const radio = container.querySelector(`input[name="correct_${idx}"]:checked`);
+          const correctAnswer = radio ? parseInt(radio.value, 10) : 0;
+
+          const optInputs = container.querySelectorAll(`.q-opt-input[data-q-idx="${idx}"]`);
+          const options = Array.from(optInputs).map(i => i.value.trim());
+
+          const optionImages = options.map((_, oIdx) => {
+            const inp = container.querySelector(`.opt-img-url-input[data-opt-img-url="${idx}_${oIdx}"]`);
+            const urlVal = inp ? inp.value.trim() : '';
+            return urlVal || (q.optionImages && q.optionImages[oIdx]) || '';
+          });
+
+          return {
+            id: q.id || `q_${idx + 1}`,
+            questionText: qText,
+            image: qImgUrl || q.image || '',
+            options: options.length > 0 ? options : defaultOptions,
+            optionImages: optionImages,
+            correctAnswer: correctAnswer,
+            points: points
+          };
         });
 
-        return {
-          id: q.id || `q_${idx + 1}`,
-          questionText: qText,
-          image: qImgUrl || q.image || '',
-          options: options,
-          optionImages: optionImages,
-          correctAnswer: correctAnswer,
-          points: points
+        const courseSelect = document.getElementById('qz-course');
+        const courseId = courseSelect ? courseSelect.value : (courses[0] ? courses[0].id : 'general');
+        const timeLimit = parseInt(document.getElementById('qz-time')?.value, 10) || 5;
+        const description = (document.getElementById('qz-desc')?.value || '').trim();
+
+        const rawPayload = {
+          title: titleVal,
+          courseId: courseId,
+          timeLimitMinutes: timeLimit,
+          description: description,
+          optionCount: optionCount,
+          questions: updatedQuestions,
+          results: (isEdit && quiz && Array.isArray(quiz.results)) ? quiz.results : []
         };
-      });
 
-      const payload = {
-        title: document.getElementById('qz-title').value.trim(),
-        courseId: document.getElementById('qz-course').value,
-        timeLimitMinutes: parseInt(document.getElementById('qz-time').value, 10),
-        description: document.getElementById('qz-desc').value.trim(),
-        optionCount: optionCount,
-        questions: updatedQuestions,
-        results: isEdit ? (quiz.results || []) : []
-      };
+        // Deep Sanitize Payload (Prevents undefined fields from crashing Firebase set())
+        const cleanPayload = this.sanitizeForFirebase(rawPayload);
 
-      if (isEdit) {
-        firebaseService.updateItem('quizzes', quiz.id, payload);
-      } else {
-        firebaseService.addItem('quizzes', payload);
+        if (isEdit && quiz && quiz.id) {
+          await firebaseService.updateItem('quizzes', quiz.id, cleanPayload);
+        } else {
+          await firebaseService.addItem('quizzes', cleanPayload);
+        }
+
+        modalEl.remove();
+
+        await showAlertModal({
+          title: '✨ บันทึกแบบทดสอบเรียบร้อย',
+          message: `บันทึกชุดแบบทดสอบจำนวน ${updatedQuestions.length} ข้อ (${optionCount} ตัวเลือก) เรียบร้อยแล้ว`,
+          type: 'success'
+        });
+
+        refreshCb();
+      } catch (err) {
+        console.error('Quiz save error:', err);
+        await showAlertModal({
+          title: '⚠️ เกิดข้อผิดพลาดในการบันทึก',
+          message: `ไม่สามารถบันทึกแบบทดสอบได้: ${err.message || err}`,
+          type: 'error'
+        });
       }
-
-      modalEl.remove();
-
-      await showAlertModal({
-        title: '✨ บันทึกแบบทดสอบเรียบร้อย',
-        message: `บันทึกชุดแบบทดสอบจำนวน ${updatedQuestions.length} ข้อ (${optionCount} ตัวเลือก) เรียบร้อยแล้ว`,
-        type: 'success'
-      });
-
-      refreshCb();
     });
   }
 
