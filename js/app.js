@@ -1,19 +1,19 @@
 /**
- * Main Application Controller & Router
+ * Main Application Controller & Router (With Cache-Busting Version Query v=2.5)
  * Handles authentication checks, tab navigation, settings rendering,
  * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
-import { RBACModule } from './modules/rbac.js';
-import { DashboardModule } from './modules/dashboard.js';
-import { StudentsModule } from './modules/students.js';
-import { HomeworkModule } from './modules/homework.js';
-import { QuizModule } from './modules/quiz.js';
-import { AttendanceModule } from './modules/attendance.js';
-import { GradebookModule } from './modules/gradebook.js';
-import { SettingsModule } from './modules/settings.js';
-import { syncEngine } from './services/syncEngine.js';
-import { decodeMojibakeThai } from './services/mojibakeDecoder.js';
+import { RBACModule } from './modules/rbac.js?v=2.5';
+import { DashboardModule } from './modules/dashboard.js?v=2.5';
+import { StudentsModule } from './modules/students.js?v=2.5';
+import { HomeworkModule } from './modules/homework.js?v=2.5';
+import { QuizModule } from './modules/quiz.js?v=2.5';
+import { AttendanceModule } from './modules/attendance.js?v=2.5';
+import { GradebookModule } from './modules/gradebook.js?v=2.5';
+import { SettingsModule } from './modules/settings.js?v=2.5';
+import { syncEngine } from './services/syncEngine.js?v=2.5';
+import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=2.5';
 
 class SchoolApp {
   constructor() {
