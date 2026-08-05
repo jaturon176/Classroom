@@ -61,9 +61,25 @@ export class QuizModule {
       return;
     }
 
-    const quizzes = firebaseService.getCollection('quizzes');
+    let quizzes = firebaseService.getCollection('quizzes');
     const courses = firebaseService.getCollection('courses');
     const currentUser = this.rbac.getCurrentUser();
+
+    // Filter quizzes by target grade & multi-room assignment for Students
+    if (currentUser.role === 'Student') {
+      quizzes = quizzes.filter(q => {
+        const tGrade = q.targetGrade || 'All';
+        const tRooms = q.targetRooms || ['All'];
+
+        if (tGrade !== 'All' && currentUser.grade && currentUser.grade !== '-' && tGrade !== currentUser.grade) {
+          return false;
+        }
+        if (!tRooms.includes('All') && currentUser.room && currentUser.room !== '-' && !tRooms.includes(currentUser.room)) {
+          return false;
+        }
+        return true;
+      });
+    }
 
     // Calculate Quiz Statistics
     const totalQuizzes = quizzes.length;
@@ -194,12 +210,15 @@ export class QuizModule {
                   <div class="glass-card p-6 md:p-7 rounded-3xl shadow-sm bg-white border border-slate-200 flex flex-col justify-between space-y-4 hover:border-purple-300 transition-all">
                     <div class="space-y-3">
                       <div class="flex justify-between items-start gap-2">
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                           <span class="bg-purple-50 text-purple-700 border border-purple-100 text-xs px-3 py-1 rounded-xl font-bold font-heading">
                             ${targetCourse ? targetCourse.name : 'ทั่วไป'}
                           </span>
                           <span class="bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs px-2.5 py-1 rounded-xl font-bold">
                             ${optionType} ตัวเลือก
+                          </span>
+                          <span class="bg-pink-50 text-pink-700 border border-pink-100 text-xs px-2.5 py-1 rounded-xl font-bold font-heading">
+                            🎯 มอบหมายให้: ${q.targetGrade && q.targetGrade !== 'All' ? q.targetGrade : ''} (${!q.targetRooms || q.targetRooms.includes('All') ? 'ทุกห้อง' : `ห้อง ${q.targetRooms.join(', ')}`})
                           </span>
                         </div>
 
@@ -565,10 +584,26 @@ export class QuizModule {
     });
   }
 
-  // Quiz Editor Modal (With question points, no explanation box, and Question/Option Image Uploads)
+  // Quiz Editor Modal (With question points, no explanation box, Target Rooms, and Question/Option Image Uploads)
   showQuizEditorModal(quiz, refreshCb, optionCountChoice = 4) {
     const isEdit = !!quiz;
     const courses = firebaseService.getCollection('courses');
+    const users = firebaseService.getCollection('users');
+    const studentUsers = users.filter(u => u.role === 'Student');
+
+    const availableGrades = ['All', ...new Set(studentUsers.map(s => s.grade).filter(g => g && g !== '-'))];
+    if (availableGrades.length === 1) availableGrades.push('ม.1', 'ม.2', 'ม.3', 'ปวช.1', 'ปวช.2');
+
+    const getRoomsForGrade = (targetGrade) => {
+      let filtered = studentUsers;
+      if (targetGrade !== 'All') {
+        filtered = studentUsers.filter(s => s.grade === targetGrade);
+      }
+      const rooms = [...new Set(filtered.map(s => s.room).filter(r => r && r !== '-'))].sort();
+      if (rooms.length === 0) rooms.push('1', '2', '3');
+      return rooms;
+    };
+
     const optionCount = isEdit ? (quiz.optionCount || (quiz.questions && quiz.questions[0] && quiz.questions[0].options ? quiz.questions[0].options.length : 4)) : optionCountChoice;
     
     const defaultOptions = optionCount === 5 
@@ -623,6 +658,30 @@ export class QuizModule {
               </div>
             </div>
 
+            <!-- Target Grade & Dynamic Multi-Room Checklist -->
+            <div class="p-4 bg-indigo-50/80 border border-indigo-100 rounded-2xl space-y-3">
+              <label class="block text-xs font-bold text-indigo-900">🎯 กำหนดกลุ่มนักเรียนที่ได้รับมอบหมาย (Target Class & Multi-Room)</label>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-600 mb-1">ระดับชั้น</label>
+                  <select id="qz-target-grade" class="input-field py-1 text-xs">
+                    ${availableGrades.map(g => `
+                      <option value="${g}" ${isEdit && quiz.targetGrade === g ? 'selected' : ''}>
+                        ${g === 'All' ? '🌐 ทุกระดับชั้น (All Grades)' : g}
+                      </option>
+                    `).join('')}
+                  </select>
+                </div>
+
+                <div>
+                  <label class="block text-[11px] font-bold text-indigo-900 mb-1">เลือกห้องเรียน (ดึงเฉพาะห้องที่มีในระบบของระดับชั้นที่เลือก)</label>
+                  <div id="qz-rooms-checklist" class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1"></div>
+                </div>
+              </div>
+              <p class="text-[11px] text-indigo-700 italic">* สามารถติ๊กเลือกหลายห้องพร้อมกันได้ นักเรียนห้องอื่นที่ไม่ได้ถูกเลือกจะไม่เห็นแบบทดสอบนี้</p>
+            </div>
+
             <!-- Question Builder List -->
             <div class="space-y-4 pt-2 border-t border-slate-100">
               <div class="flex justify-between items-center">
@@ -648,6 +707,33 @@ export class QuizModule {
     const modalEl = document.getElementById('quiz-editor-modal');
     const scrollContainer = modalEl.querySelector('#quiz-modal-scroll');
     const container = modalEl.querySelector('#questions-container');
+
+    const gradeSelect = modalEl.querySelector('#qz-target-grade');
+    const checklistContainer = modalEl.querySelector('#qz-rooms-checklist');
+
+    const updateRoomChecklist = () => {
+      const selectedGrade = gradeSelect ? gradeSelect.value : 'All';
+      const rooms = getRoomsForGrade(selectedGrade);
+      const currentSelectedRooms = isEdit && quiz.targetRooms ? quiz.targetRooms : ['All'];
+
+      if (checklistContainer) {
+        checklistContainer.innerHTML = `
+          <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-indigo-100/60">
+            <input type="checkbox" name="qz_room_check" value="All" ${currentSelectedRooms.includes('All') ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded">
+            <span>🌐 ทุกห้อง</span>
+          </label>
+          ${rooms.map(r => `
+            <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-indigo-100/60">
+              <input type="checkbox" name="qz_room_check" value="${r}" ${currentSelectedRooms.includes(r) ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded">
+              <span>🏫 ห้อง ${r}</span>
+            </label>
+          `).join('')}
+        `;
+      }
+    };
+
+    updateRoomChecklist();
+    if (gradeSelect) gradeSelect.addEventListener('change', updateRoomChecklist);
 
     const renderQuestions = () => {
       container.innerHTML = questions.map((q, idx) => `
@@ -821,12 +907,20 @@ export class QuizModule {
         const timeLimit = parseInt(document.getElementById('qz-time')?.value, 10) || 5;
         const description = (document.getElementById('qz-desc')?.value || '').trim();
 
+        const checkboxes = modalEl.querySelectorAll('input[name="qz_room_check"]:checked');
+        let selectedRooms = Array.from(checkboxes).map(cb => cb.value);
+        if (selectedRooms.length === 0) selectedRooms = ['All'];
+
+        const targetGrade = document.getElementById('qz-target-grade')?.value || 'All';
+
         const rawPayload = {
           title: titleVal,
           courseId: courseId,
           timeLimitMinutes: timeLimit,
           description: description,
           optionCount: optionCount,
+          targetGrade: targetGrade,
+          targetRooms: selectedRooms,
           isOpen: isEdit ? (quiz.isOpen !== false) : true,
           questions: updatedQuestions,
           results: (isEdit && quiz && Array.isArray(quiz.results)) ? quiz.results : []
