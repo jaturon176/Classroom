@@ -19,10 +19,16 @@ export class QuizModule {
   constructor(rbac) {
     this.rbac = rbac;
     this.quizTimer = null;
+    this.isSessionActive = false;
 
     // Listen for 0.1s Cloud Realtime Database updates across all devices
     window.addEventListener('ag_realtime_update', (e) => {
       if (e.detail && (e.detail.collection === 'quizzes' || e.detail.collection === 'courses')) {
+        // Prevent resetting active quiz session if student is in the middle of taking a test!
+        if (this.isSessionActive) {
+          return;
+        }
+
         const activeContainer = document.getElementById('app-content');
         if (activeContainer && window.app && window.app.activeTab === 'quiz') {
           this.render(activeContainer);
@@ -51,6 +57,10 @@ export class QuizModule {
   }
 
   render(containerEl) {
+    if (this.isSessionActive) {
+      return;
+    }
+
     const quizzes = firebaseService.getCollection('quizzes');
     const courses = firebaseService.getCollection('courses');
     const currentUser = this.rbac.getCurrentUser();
@@ -854,6 +864,7 @@ export class QuizModule {
 
   // Interactive Student Take Quiz Session
   startQuizSession(containerEl, quiz) {
+    this.isSessionActive = true;
     const currentUser = this.rbac.getCurrentUser();
     const questions = quiz.questions || [];
     let secondsLeft = (quiz.timeLimitMinutes || 5) * 60;
@@ -1074,6 +1085,9 @@ export class QuizModule {
       </div>
     `;
 
-    containerEl.querySelector('#btn-back-to-quizzes')?.addEventListener('click', () => this.render(containerEl));
+    containerEl.querySelector('#btn-back-to-quizzes')?.addEventListener('click', () => {
+      this.isSessionActive = false;
+      this.render(containerEl);
+    });
   }
 }

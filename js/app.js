@@ -34,6 +34,10 @@ class SchoolApp {
 
     // 🌐 Central Primary Server 0.1s Realtime Sync Listener for all connected devices
     window.addEventListener('ag_realtime_update', () => {
+      // Prevent resetting active quiz session if student is in the middle of taking a test!
+      if (this.activeTab === 'quiz' && this.quizModule && this.quizModule.isSessionActive) {
+        return;
+      }
       this.renderActiveTab();
     });
   }
@@ -67,6 +71,9 @@ class SchoolApp {
   }
 
   switchTab(tabName) {
+    if (tabName !== 'quiz' && this.quizModule) {
+      this.quizModule.isSessionActive = false;
+    }
     this.activeTab = tabName;
     this.renderHeader();
     this.renderActiveTab();
