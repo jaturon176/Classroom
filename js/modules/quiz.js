@@ -6,6 +6,9 @@
  * - Removed Explanation box
  * - Image Uploads for Questions & Options (จากเครื่องหรือ URL)
  * - Real-Time Countdown Timer & Instant Auto-Grading.
+ * - Teacher Score Directory & Filtering per Student / per Classroom Room.
+ * - Delete Student Score Attempt (Reset Score so Student can Re-take).
+ * - Toggle Open / Close Quiz Access (เปิด/ปิด รับการทำแบบทดสอบ).
  */
 
 import { firebaseService } from '../services/firebaseService.js?v=4.0';
@@ -84,7 +87,7 @@ export class QuizModule {
               <span class="p-2.5 bg-purple-50 text-purple-600 rounded-2xl border border-purple-100 text-xl">✨</span>
               ระบบแบบทดสอบออนไลน์ (Online Examination System)
             </h2>
-            <p class="text-slate-500 text-xs mt-1">สร้างแบบทดสอบ 4 หรือ 5 ตัวเลือก, กำหนดคะแนนรายข้อ, แนบรูปภาพโจทย์และตัวเลือก, ตรวจอัตโนมัติ</p>
+            <p class="text-slate-500 text-xs mt-1">สร้างแบบทดสอบ 4 หรือ 5 ตัวเลือก, กำหนดคะแนนรายข้อ, แนบรูปภาพโจทย์, เปิด/ปิด รับข้อสอบ, ดูและลบคะแนนนักเรียนรายห้อง</p>
           </div>
 
           ${this.rbac.canCreateQuiz() ? `
@@ -175,6 +178,7 @@ export class QuizModule {
                 const optionType = q.optionCount || (q.questions && q.questions[0] && q.questions[0].options ? q.questions[0].options.length : 4);
                 const myResult = q.results ? q.results.find(r => r.studentId === currentUser.studentId) : null;
                 const attemptsCount = q.results ? q.results.length : 0;
+                const isOpen = q.isOpen !== false; // Default is open
 
                 return `
                   <div class="glass-card p-6 md:p-7 rounded-3xl shadow-sm bg-white border border-slate-200 flex flex-col justify-between space-y-4 hover:border-purple-300 transition-all">
@@ -188,8 +192,12 @@ export class QuizModule {
                             ${optionType} ตัวเลือก
                           </span>
                         </div>
-                        <span class="text-xs font-mono font-bold text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
-                          ⏱️ ${q.timeLimitMinutes || 5} นาที
+
+                        <!-- Open/Closed Access Badge -->
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-xl font-heading ${
+                          isOpen ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        }">
+                          ${isOpen ? '🟢 เปิดรับคำตอบ' : '🔒 ปิดรับคำตอบ'}
                         </span>
                       </div>
 
@@ -200,29 +208,50 @@ export class QuizModule {
                         ${decodeMojibakeThai(q.description || 'ไม่มีคำอธิบาย')}
                       </p>
 
-                      <div class="flex items-center gap-4 text-xs text-slate-500 pt-2 border-t border-slate-100">
+                      <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
                         <span>❓ จำนวน: <strong class="text-slate-900 font-bold">${qCount} ข้อ (${totalPoints} คะแนน)</strong></span>
-                        <span>📊 ผู้ทำข้อสอบ: <strong class="text-indigo-600 font-bold">${attemptsCount} ครั้ง</strong></span>
+                        <span>⏱️ เวลา: <strong class="text-slate-900 font-bold">${q.timeLimitMinutes || 5} นาที</strong></span>
+                        <span>📊 ทำแล้ว: <strong class="text-indigo-600 font-bold">${attemptsCount} ครั้ง</strong></span>
                       </div>
                     </div>
 
                     <!-- Action Bar -->
-                    <div class="pt-3 border-t border-slate-100 flex flex-wrap justify-between items-center gap-3">
+                    <div class="pt-3 border-t border-slate-100 flex flex-wrap justify-between items-center gap-2">
+                      <!-- Student Action -->
                       ${this.rbac.canTakeQuiz() && currentUser.role === 'Student' ? `
-                        ${myResult ? `
-                          <span class="px-3.5 py-1.5 rounded-xl text-xs font-bold ${
-                            (myResult.score / myResult.maxScore) >= 0.6 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
-                          }">
-                            ${(myResult.score / myResult.maxScore) >= 0.6 ? '✅' : '⚠️'} คะแนน: ${myResult.score}/${myResult.maxScore}
+                        ${!isOpen ? `
+                          <span class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 border border-rose-200">
+                            🔒 ปิดรับการทำแบบทดสอบแล้ว
                           </span>
-                          <button data-take-quiz="${q.id}" class="btn-secondary text-xs px-3.5 py-1.5 rounded-xl font-heading font-semibold">ทำข้อสอบอีกครั้ง</button>
+                        ` : myResult ? `
+                          <div class="flex items-center gap-2">
+                            <span class="px-3.5 py-1.5 rounded-xl text-xs font-bold ${
+                              (myResult.score / myResult.maxScore) >= 0.6 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                            }">
+                              ${(myResult.score / myResult.maxScore) >= 0.6 ? '✅' : '⚠️'} คะแนน: ${myResult.score}/${myResult.maxScore}
+                            </span>
+                            <button data-take-quiz="${q.id}" class="btn-secondary text-xs px-3.5 py-1.5 rounded-xl font-heading font-semibold">ทำข้อสอบอีกครั้ง</button>
+                          </div>
                         ` : `
                           <button data-take-quiz="${q.id}" class="btn-primary text-xs px-5 py-2.5 rounded-xl font-heading font-bold shadow-md">✏️ เริ่มทำแบบทดสอบ</button>
                         `}
                       ` : ''}
 
+                      <!-- Teacher / Admin Actions -->
                       ${this.rbac.canCreateQuiz() ? `
-                        <div class="flex items-center gap-2 ml-auto">
+                        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-end">
+                          <!-- Toggle Open / Closed Status -->
+                          <button data-toggle-quiz="${q.id}" class="text-xs font-bold px-3 py-1.5 rounded-xl border transition-all ${
+                            isOpen ? 'bg-rose-50 text-rose-600 hover:bg-rose-100 border-rose-200' : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200'
+                          }">
+                            ${isOpen ? '🔴 ปิดรับข้อสอบ' : '🟢 เปิดรับข้อสอบ'}
+                          </button>
+
+                          <!-- View Student Scores Directory & Filter Button -->
+                          <button data-view-scores="${q.id}" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-1.5 rounded-xl transition-all">
+                            📊 ดูคะแนน (${attemptsCount})
+                          </button>
+
                           <button data-edit-quiz="${q.id}" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold px-2.5 py-1.5 rounded-xl hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-all">✏️ แก้ไข</button>
                           <button data-del-quiz="${q.id}" data-quiz-title="${decodeMojibakeThai(q.title)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2.5 py-1.5 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all">🗑️ ลบ</button>
                         </div>
@@ -241,6 +270,28 @@ export class QuizModule {
     containerEl.querySelector('#btn-create-quiz')?.addEventListener('click', () => {
       this.showOptionTypePromptModal((optionCount) => {
         this.showQuizEditorModal(null, () => this.render(containerEl), optionCount);
+      });
+    });
+
+    // Toggle Open/Closed Access Handler
+    containerEl.querySelectorAll('[data-toggle-quiz]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = e.currentTarget.dataset.toggleQuiz;
+        const q = quizzes.find(item => item.id === id);
+        if (q) {
+          const newStatus = q.isOpen === false ? true : false;
+          await firebaseService.updateItem('quizzes', id, { isOpen: newStatus });
+          this.render(containerEl);
+        }
+      });
+    });
+
+    // View Student Scores Directory Handler
+    containerEl.querySelectorAll('[data-view-scores]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const id = e.currentTarget.dataset.viewScores;
+        const q = quizzes.find(item => item.id === id);
+        this.showQuizScoresModal(q, () => this.render(containerEl));
       });
     });
 
@@ -278,6 +329,178 @@ export class QuizModule {
         this.startQuizSession(containerEl, q);
       });
     });
+  }
+
+  // Teacher & Admin Student Scores Directory Modal (Filter per student / per room & delete score)
+  showQuizScoresModal(quiz, refreshCb) {
+    const users = firebaseService.getCollection('users');
+    const students = users.filter(u => u.role === 'Student');
+
+    let currentRoomFilter = 'All';
+    let currentSearch = '';
+
+    const modalHTML = `
+      <div id="quiz-scores-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div class="glass-card w-full max-w-4xl p-6 md:p-8 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] flex flex-col">
+          <!-- Modal Header -->
+          <div class="flex justify-between items-start pb-4 border-b border-slate-100 shrink-0">
+            <div>
+              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 font-heading">
+                📊 รายงานผลคะแนนสอบ
+              </span>
+              <h3 class="text-xl font-bold text-slate-900 font-heading mt-1 flex items-center gap-2">
+                ${decodeMojibakeThai(quiz.title)}
+              </h3>
+            </div>
+            <button id="close-scores-modal" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+          </div>
+
+          <!-- Controls Bar -->
+          <div class="py-4 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+            <div class="relative w-full sm:w-72">
+              <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm">🔍</span>
+              <input type="text" id="score-search-input" placeholder="ค้นหาชื่อหรือรหัสนักเรียน..." class="input-field pl-9 py-1.5 text-xs">
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+              <span class="text-xs font-bold text-slate-600">🚪 ห้อง:</span>
+              <select id="score-room-filter" class="input-field py-1.5 px-3 text-xs w-auto">
+                <option value="All">ทุกห้องเรียน</option>
+                ${[...new Set(students.map(s => `ห้อง ${s.room}`))].map(r => `<option value="${r}">${r}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+
+          <!-- Table Container -->
+          <div id="scores-table-container" class="overflow-y-auto flex-1 border border-slate-200 rounded-2xl">
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 flex justify-end shrink-0">
+            <button id="close-scores-btn" class="btn-primary text-xs px-6 py-2 rounded-xl font-heading font-semibold">ปิดหน้าต่าง</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modalEl = document.getElementById('quiz-scores-modal');
+    const tableContainer = modalEl.querySelector('#scores-table-container');
+
+    const renderScoresTable = () => {
+      const results = quiz.results || [];
+
+      // Enrich results with student profile info from users collection
+      const enrichedResults = results.map(r => {
+        const std = students.find(s => s.studentId === r.studentId || s.name === r.studentName);
+        return {
+          ...r,
+          grade: std ? std.grade : '-',
+          room: std ? std.room : '-',
+          no: std ? std.no : '-'
+        };
+      });
+
+      // Filter by room and search query
+      const filtered = enrichedResults.filter(r => {
+        if (currentRoomFilter !== 'All' && `ห้อง ${r.room}` !== currentRoomFilter) return false;
+        if (currentSearch) {
+          const q = currentSearch.toLowerCase();
+          const name = decodeMojibakeThai(r.studentName || '').toLowerCase();
+          const stdId = (r.studentId || '').toLowerCase();
+          if (!name.includes(q) && !stdId.includes(q)) return false;
+        }
+        return true;
+      });
+
+      tableContainer.innerHTML = `
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-700 text-xs font-heading font-bold uppercase tracking-wider border-b border-slate-200 sticky top-0 bg-slate-50">
+              <th class="p-3">รหัสนักเรียน</th>
+              <th class="p-3">ชื่อ-นามสกุล</th>
+              <th class="p-3 text-center">ชั้น/ห้อง</th>
+              <th class="p-3 text-center">คะแนนที่ได้</th>
+              <th class="p-3 text-center">สถานะ</th>
+              <th class="p-3 text-center">เวลาที่ส่ง</th>
+              <th class="p-3 text-right">จัดการ</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 text-xs">
+            ${filtered.length === 0 ? `
+              <tr><td colspan="7" class="text-center py-10 text-slate-400">ไม่พบประวัติการทำข้อสอบตามเงื่อนไขที่เลือก</td></tr>
+            ` : filtered.map((r) => {
+              const score = r.score || 0;
+              const maxScore = r.maxScore || 1;
+              const percent = Math.round((score / maxScore) * 100);
+              const isPassed = percent >= 60;
+
+              return `
+                <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="p-3 font-mono font-bold text-indigo-600">${r.studentId}</td>
+                  <td class="p-3 font-bold text-slate-900">${decodeMojibakeThai(r.studentName)}</td>
+                  <td class="p-3 text-center font-heading">
+                    <span class="bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md font-semibold">${r.grade}/${r.room} (เลขที่ ${r.no})</span>
+                  </td>
+                  <td class="p-3 text-center font-bold font-mono text-sm">
+                    <span class="${isPassed ? 'text-emerald-600' : 'text-rose-600'}">${score}/${maxScore}</span>
+                    <span class="text-[10px] text-slate-400 font-normal">(${percent}%)</span>
+                  </td>
+                  <td class="p-3 text-center">
+                    <span class="px-2.5 py-0.5 rounded-full font-bold ${isPassed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                      ${isPassed ? '✅ ผ่าน' : '⚠️ ไม่ผ่าน'}
+                    </span>
+                  </td>
+                  <td class="p-3 text-center font-mono text-slate-500">${r.completedAt || '-'}</td>
+                  <td class="p-3 text-right">
+                    <button data-del-score="${r.studentId}" class="text-rose-600 hover:text-rose-800 font-bold px-2.5 py-1 hover:bg-rose-50 rounded-lg border border-transparent hover:border-rose-200 transition-all">
+                      🗑️ ลบคะแนน
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+
+      // Bind delete score handler
+      tableContainer.querySelectorAll('[data-del-score]').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const stdId = e.currentTarget.dataset.delScore;
+          const targetResult = (quiz.results || []).find(r => r.studentId === stdId);
+          const stdName = targetResult ? targetResult.studentName : stdId;
+
+          const confirmed = await showConfirmModal({
+            title: '🗑️ ยืนยันการลบคะแนน',
+            message: `คุณแน่ใจหรือไม่ว่าต้องการลบคะแนนแบบทดสอบของ "${decodeMojibakeThai(stdName)}"? หลังจากลบแล้วนักเรียนจะสามารถเข้าทำแบบทดสอบชุดนี้ใหม่อีกครั้งได้`,
+            confirmText: 'ลบคะแนน',
+            cancelText: 'ยกเลิก'
+          });
+
+          if (confirmed) {
+            const updatedResults = (quiz.results || []).filter(r => r.studentId !== stdId);
+            quiz.results = updatedResults;
+            await firebaseService.updateItem('quizzes', quiz.id, { results: updatedResults });
+            renderScoresTable();
+            refreshCb();
+          }
+        });
+      });
+    };
+
+    renderScoresTable();
+
+    modalEl.querySelector('#score-search-input')?.addEventListener('input', (e) => {
+      currentSearch = e.target.value.trim();
+      renderScoresTable();
+    });
+
+    modalEl.querySelector('#score-room-filter')?.addEventListener('change', (e) => {
+      currentRoomFilter = e.target.value;
+      renderScoresTable();
+    });
+
+    modalEl.querySelectorAll('#close-scores-modal, #close-scores-btn').forEach(b => b.addEventListener('click', () => modalEl.remove()));
   }
 
   // Popup Prompt Modal Asking: 4 Options vs 5 Options before creating quiz
@@ -595,6 +818,7 @@ export class QuizModule {
           timeLimitMinutes: timeLimit,
           description: description,
           optionCount: optionCount,
+          isOpen: isEdit ? (quiz.isOpen !== false) : true,
           questions: updatedQuestions,
           results: (isEdit && quiz && Array.isArray(quiz.results)) ? quiz.results : []
         };
