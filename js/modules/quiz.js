@@ -9,11 +9,12 @@
  * - Teacher Score Directory & Filtering per Student / per Classroom Room.
  * - Delete Student Score Attempt (Reset Score so Student can Re-take).
  * - Toggle Open / Close Quiz Access (เปิด/ปิด รับการทำแบบทดสอบ).
+ * - DOM Input Sync Protection (พิมพ์โจทย์/ตัวเลือกแล้วกดเพิ่มข้อ ข้อมูลไม่หายถาวร).
  */
 
-import { firebaseService } from '../services/firebaseService.js?v=4.0';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=4.0';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=4.0';
+import { firebaseService } from '../services/firebaseService.js?v=5.0';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=5.0';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=5.0';
 
 export class QuizModule {
   constructor(rbac) {
@@ -640,6 +641,36 @@ export class QuizModule {
     const scrollContainer = modalEl.querySelector('#quiz-modal-scroll');
     const container = modalEl.querySelector('#questions-container');
 
+    // Sync input values from active DOM into questions array in memory before modifying array or re-rendering
+    const syncCurrentQuestionsFromDOM = () => {
+      questions.forEach((q, idx) => {
+        const qTextEl = container.querySelector(`.q-text-input[data-q-idx="${idx}"]`);
+        if (qTextEl) q.questionText = qTextEl.value;
+
+        const pointsEl = container.querySelector(`.q-points-input[data-q-idx="${idx}"]`);
+        if (pointsEl) q.points = parseInt(pointsEl.value, 10) || 1;
+
+        const qImgUrlEl = container.querySelector(`.q-img-url-input[data-q-idx="${idx}"]`);
+        if (qImgUrlEl) q.image = qImgUrlEl.value.trim() || q.image || '';
+
+        const radio = container.querySelector(`input[name="correct_${idx}"]:checked`);
+        if (radio) q.correctAnswer = parseInt(radio.value, 10);
+
+        const optInputs = container.querySelectorAll(`.q-opt-input[data-q-idx="${idx}"]`);
+        if (optInputs.length > 0) {
+          q.options = Array.from(optInputs).map(i => i.value);
+        }
+
+        if (!q.optionImages) q.optionImages = [];
+        (q.options || []).forEach((_, oIdx) => {
+          const inp = container.querySelector(`.opt-img-url-input[data-opt-img-url="${idx}_${oIdx}"]`);
+          if (inp && inp.value.trim()) {
+            q.optionImages[oIdx] = inp.value.trim();
+          }
+        });
+      });
+    };
+
     const renderQuestions = () => {
       container.innerHTML = questions.map((q, idx) => `
         <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 relative">
@@ -707,6 +738,7 @@ export class QuizModule {
       // Bind dynamic remove & image file uploads
       container.querySelectorAll('[data-remove-q]').forEach(b => {
         b.addEventListener('click', (e) => {
+          syncCurrentQuestionsFromDOM();
           const idx = parseInt(e.currentTarget.dataset.removeQ, 10);
           questions.splice(idx, 1);
           renderQuestions();
@@ -716,6 +748,7 @@ export class QuizModule {
       // Bind Question Image File Upload
       container.querySelectorAll('[data-q-img-file]').forEach(inp => {
         inp.addEventListener('change', (e) => {
+          syncCurrentQuestionsFromDOM();
           const idx = parseInt(e.currentTarget.dataset.qImgFile, 10);
           if (e.target.files.length > 0) {
             const reader = new FileReader();
@@ -731,6 +764,7 @@ export class QuizModule {
       // Bind Option Image File Upload
       container.querySelectorAll('[data-opt-img-file]').forEach(inp => {
         inp.addEventListener('change', (e) => {
+          syncCurrentQuestionsFromDOM();
           const [qIdx, oIdx] = e.currentTarget.dataset.optImgFile.split('_').map(Number);
           if (e.target.files.length > 0) {
             const reader = new FileReader();
@@ -747,7 +781,9 @@ export class QuizModule {
 
     renderQuestions();
 
+    // Click handler for Add New Question (Syncs current DOM state before adding)
     modalEl.querySelector('#btn-add-question').addEventListener('click', () => {
+      syncCurrentQuestionsFromDOM();
       questions.push({
         id: `q_${Date.now()}`,
         questionText: '',
@@ -766,46 +802,14 @@ export class QuizModule {
       e.preventDefault();
 
       try {
+        syncCurrentQuestionsFromDOM();
+
         const titleVal = (document.getElementById('qz-title')?.value || '').trim();
         if (!titleVal) {
           if (scrollContainer) scrollContainer.scrollTop = 0;
           await showAlertModal({ title: '⚠️ กรอกชื่อแบบทดสอบ', message: 'กรุณาระบุ "ชื่อชุดแบบทดสอบ" ก่อนบันทึก' });
           return;
         }
-
-        // Collect updated questions values safely
-        const updatedQuestions = questions.map((q, idx) => {
-          const qTextEl = container.querySelector(`.q-text-input[data-q-idx="${idx}"]`);
-          const qText = qTextEl ? qTextEl.value.trim() : (q.questionText || '');
-
-          const pointsEl = container.querySelector(`.q-points-input[data-q-idx="${idx}"]`);
-          const points = pointsEl ? (parseInt(pointsEl.value, 10) || 1) : (q.points || 1);
-
-          const qImgUrlEl = container.querySelector(`.q-img-url-input[data-q-idx="${idx}"]`);
-          const qImgUrl = qImgUrlEl ? qImgUrlEl.value.trim() : '';
-
-          const radio = container.querySelector(`input[name="correct_${idx}"]:checked`);
-          const correctAnswer = radio ? parseInt(radio.value, 10) : 0;
-
-          const optInputs = container.querySelectorAll(`.q-opt-input[data-q-idx="${idx}"]`);
-          const options = Array.from(optInputs).map(i => i.value.trim());
-
-          const optionImages = options.map((_, oIdx) => {
-            const inp = container.querySelector(`.opt-img-url-input[data-opt-img-url="${idx}_${oIdx}"]`);
-            const urlVal = inp ? inp.value.trim() : '';
-            return urlVal || (q.optionImages && q.optionImages[oIdx]) || '';
-          });
-
-          return {
-            id: q.id || `q_${idx + 1}`,
-            questionText: qText,
-            image: qImgUrl || q.image || '',
-            options: options.length > 0 ? options : defaultOptions,
-            optionImages: optionImages,
-            correctAnswer: correctAnswer,
-            points: points
-          };
-        });
 
         const courseSelect = document.getElementById('qz-course');
         const courseId = courseSelect ? courseSelect.value : (courses[0] ? courses[0].id : 'general');
@@ -819,7 +823,7 @@ export class QuizModule {
           description: description,
           optionCount: optionCount,
           isOpen: isEdit ? (quiz.isOpen !== false) : true,
-          questions: updatedQuestions,
+          questions: questions,
           results: (isEdit && quiz && Array.isArray(quiz.results)) ? quiz.results : []
         };
 
@@ -836,7 +840,7 @@ export class QuizModule {
 
         await showAlertModal({
           title: '✨ บันทึกแบบทดสอบเรียบร้อย',
-          message: `บันทึกชุดแบบทดสอบจำนวน ${updatedQuestions.length} ข้อ (${optionCount} ตัวเลือก) เรียบร้อยแล้ว`,
+          message: `บันทึกชุดแบบทดสอบจำนวน ${questions.length} ข้อ (${optionCount} ตัวเลือก) เรียบร้อยแล้ว`,
           type: 'success'
         });
 
