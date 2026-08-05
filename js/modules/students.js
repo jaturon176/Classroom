@@ -10,9 +10,9 @@
  * - Export Roster & Batch Deletion
  */
 
-import { firebaseService } from '../services/firebaseService.js';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
+import { firebaseService } from '../services/firebaseService.js?v=3.1';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=3.1';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=3.1';
 
 export class StudentsModule {
   constructor(rbac) {
@@ -51,15 +51,18 @@ export class StudentsModule {
       return noA - noB;
     });
 
+    // Dynamic page size based on view mode (9 for grid card view, 10 for table view)
+    const effectivePageSize = this.viewMode === 'grid' ? 9 : 10;
+
     // Pagination calculations
     const totalStudents = filtered.length;
-    const totalPages = Math.ceil(totalStudents / this.pageSize) || 1;
+    const totalPages = Math.ceil(totalStudents / effectivePageSize) || 1;
 
     if (this.currentPage > totalPages) this.currentPage = totalPages;
     if (this.currentPage < 1) this.currentPage = 1;
 
-    const startIdx = (this.currentPage - 1) * this.pageSize;
-    const endIdx = startIdx + this.pageSize;
+    const startIdx = (this.currentPage - 1) * effectivePageSize;
+    const endIdx = startIdx + effectivePageSize;
     const paginatedStudents = filtered.slice(startIdx, endIdx);
 
     containerEl.innerHTML = `
