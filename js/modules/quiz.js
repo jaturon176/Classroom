@@ -397,7 +397,9 @@ export class QuizModule {
     const tableContainer = modalEl.querySelector('#scores-table-container');
 
     const renderScoresTable = () => {
-      const results = quiz.results || [];
+      const allQuizzes = firebaseService.getCollection('quizzes');
+      const activeQuiz = allQuizzes.find(q => q.id === quiz.id) || quiz;
+      const results = activeQuiz.results || [];
 
       // Enrich results with student profile info from users collection
       const enrichedResults = results.map(r => {
