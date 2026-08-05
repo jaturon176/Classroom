@@ -1,6 +1,6 @@
 /**
  * Role-Based Access Control (RBAC) Module
- * Handles Authentication, User Management (with 10-item Pagination), Permission Guards, Login UI,
+ * Handles Authentication, User Management (with 10-item Pagination), Permission Guards, Login UI (with Show/Hide Password Toggle),
  * Personal Password Change Modal, and Profile Picture Avatar Management for ALL users.
  */
 
@@ -87,7 +87,6 @@ export class RBACModule {
       (u.email && u.email.toLowerCase() === input)
     );
 
-    // Fail-safe check against INITIAL_USERS if users dataset is loading
     if (!user) {
       user = INITIAL_USERS.find(u => 
         (u.username && u.username.toLowerCase() === input) ||
@@ -321,7 +320,7 @@ export class RBACModule {
     });
   }
 
-  // Render Login Portal View
+  // Render Login Portal View (With Show/Hide Password Toggle Button 👁️/🙈)
   renderLoginScreen(containerEl) {
     containerEl.innerHTML = `
       <div class="min-h-[70vh] flex items-center justify-center p-4 animate-fade-in">
@@ -357,7 +356,12 @@ export class RBACModule {
 
             <div>
               <label class="block text-xs font-bold font-heading text-slate-700 mb-1">รหัสผ่าน (นักเรียนรหัสผ่านเริ่มต้นคือ รหัสนักเรียน)</label>
-              <input type="password" id="login-pass" required class="input-field" placeholder="••••••••">
+              <div class="relative">
+                <input type="password" id="login-pass" required class="input-field pr-11" placeholder="••••••••">
+                <button type="button" id="btn-toggle-login-pass" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-base font-semibold p-1 transition-colors flex items-center justify-center" title="แสดง/ซ่อนรหัสผ่าน">
+                  👁️
+                </button>
+              </div>
             </div>
 
             <div id="login-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium text-center"></div>
@@ -369,6 +373,17 @@ export class RBACModule {
         </div>
       </div>
     `;
+
+    // Toggle Show/Hide Password Event Handler
+    const passInput = containerEl.querySelector('#login-pass');
+    const toggleBtn = containerEl.querySelector('#btn-toggle-login-pass');
+
+    toggleBtn?.addEventListener('click', () => {
+      const isPassword = passInput.type === 'password';
+      passInput.type = isPassword ? 'text' : 'password';
+      toggleBtn.innerHTML = isPassword ? '🙈' : '👁️';
+      toggleBtn.title = isPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน';
+    });
 
     containerEl.querySelector('#quick-admin')?.addEventListener('click', () => this.quickLogin('Admin'));
     containerEl.querySelector('#quick-teacher')?.addEventListener('click', () => this.quickLogin('Teacher'));
