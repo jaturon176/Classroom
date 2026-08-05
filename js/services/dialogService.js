@@ -113,3 +113,69 @@ export function showAlertModal({
     });
   });
 }
+
+export function showImagePreviewModal({
+  imageUrl = '',
+  title = '🖼️ รูปภาพชิ้นงานของนักเรียน',
+  studentName = ''
+} = {}) {
+  return new Promise((resolve) => {
+    const modalHTML = `
+      <div id="custom-image-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[120] flex items-center justify-center p-4 animate-fade-in">
+        <div class="glass-card w-full max-w-4xl p-6 rounded-3xl shadow-2xl relative border border-slate-700/60 bg-slate-900 text-white max-h-[92vh] flex flex-col space-y-4 animate-scale-up">
+          
+          <!-- Header Bar -->
+          <div class="flex justify-between items-center pb-3 border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xl">📸</span>
+              <div>
+                <h3 class="text-base font-bold font-heading text-slate-100">${title}</h3>
+                ${studentName ? `<p class="text-xs text-slate-400 font-heading">เจ้าของชิ้นงาน: <strong class="text-amber-400 font-bold">${studentName}</strong></p>` : ''}
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <a href="${imageUrl}" download target="_blank" class="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition-all flex items-center gap-1">
+                <span>⬇️</span> ดาวน์โหลดรูป
+              </a>
+              <button id="close-img-modal-btn" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center text-lg font-bold transition-all">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- Image Preview Area -->
+          <div class="flex-1 overflow-auto flex items-center justify-center bg-slate-950/80 rounded-2xl p-3 border border-slate-800/80 min-h-[300px]">
+            <img src="${imageUrl}" class="max-h-[70vh] w-auto max-w-full object-contain rounded-xl shadow-2xl transition-transform hover:scale-[1.02]">
+          </div>
+
+          <!-- Footer -->
+          <div class="flex justify-between items-center pt-2 text-xs text-slate-400 border-t border-slate-800 shrink-0">
+            <span class="text-[11px] text-slate-500">☁️ จัดเก็บไฟล์รูปบน Cloudinary CDN (gibfwtj2) ความคมชัดสูง</span>
+            <button id="close-img-modal-footer-btn" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold font-heading transition-all shadow-md">
+              ปิดหน้าต่างรูปภาพ
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modalEl = document.getElementById('custom-image-modal');
+
+    const cleanup = () => {
+      modalEl.classList.add('opacity-0', 'transition-opacity', 'duration-150');
+      setTimeout(() => {
+        modalEl.remove();
+        resolve(true);
+      }, 150);
+    };
+
+    modalEl.querySelectorAll('#close-img-modal-btn, #close-img-modal-footer-btn').forEach(b => b.addEventListener('click', cleanup));
+
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) cleanup();
+    });
+  });
+}

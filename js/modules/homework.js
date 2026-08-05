@@ -9,7 +9,7 @@
 
 import { firebaseService } from '../services/firebaseService.js';
 import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
+import { showConfirmModal, showAlertModal, showImagePreviewModal } from '../services/dialogService.js';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 
 export class HomeworkModule {
@@ -251,6 +251,9 @@ export class HomeworkModule {
                       <button data-grade-hw="${hw.id}" class="btn-primary text-xs px-4 py-2 rounded-xl font-heading font-bold">
                         🔍 ตรวจงานนักเรียน (${submissionCount})
                       </button>
+                      <button data-edit-hw="${hw.id}" class="btn-secondary text-xs px-3.5 py-2 rounded-xl font-heading font-bold">
+                        ✏️ แก้ไขการบ้าน
+                      </button>
                       <button data-del-hw="${hw.id}" data-hw-title="${decodeMojibakeThai(hw.title)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2.5 py-1.5 rounded-xl hover:bg-rose-50 border border-transparent hover:border-rose-100 transition-all">ลบการบ้าน</button>
                     ` : ''}
                   </div>
@@ -302,13 +305,21 @@ export class HomeworkModule {
     });
 
     containerEl.querySelector('#btn-add-course')?.addEventListener('click', () => this.showCourseModal(null, () => this.render(containerEl)));
-    containerEl.querySelector('#btn-add-hw')?.addEventListener('click', () => this.showHomeworkModal(() => this.render(containerEl)));
+    containerEl.querySelector('#btn-add-hw')?.addEventListener('click', () => this.showHomeworkModal(null, () => this.render(containerEl)));
 
     containerEl.querySelectorAll('[data-submit-hw]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const hwId = e.currentTarget.dataset.submitHw;
         const hw = allHomework.find(h => h.id === hwId);
         this.showSubmissionModal(hw, () => this.render(containerEl));
+      });
+    });
+
+    containerEl.querySelectorAll('[data-edit-hw]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const hwId = e.currentTarget.dataset.editHw;
+        const hw = allHomework.find(h => h.id === hwId);
+        this.showHomeworkModal(hw, () => this.render(containerEl));
       });
     });
 
@@ -471,7 +482,13 @@ export class HomeworkModule {
     });
   }
 
-  showHomeworkModal(refreshCb) {
+  showHomeworkModal(targetHw = null, refreshCb) {
+    if (typeof targetHw === 'function') {
+      refreshCb = targetHw;
+      targetHw = null;
+    }
+    const isEdit = !!targetHw;
+
     const allCourses = firebaseService.getCollection('courses');
     const users = firebaseService.getCollection('users');
     const currentUser = this.rbac.getCurrentUser();
@@ -500,7 +517,9 @@ export class HomeworkModule {
       <div id="hw-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
         <div class="glass-card w-full max-w-lg p-6 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] overflow-y-auto">
           <div class="flex justify-between items-center pb-4 border-b border-slate-100">
-            <h3 class="text-xl font-bold text-slate-900 font-heading">📝 สั่งการบ้านใหม่</h3>
+            <h3 class="text-xl font-bold text-slate-900 font-heading">
+              ${isEdit ? '✏️ แก้ไขข้อมูลการบ้าน' : '📝 สั่งการบ้านใหม่'}
+            </h3>
             <button id="close-hw-modal" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
           </div>
 
@@ -508,7 +527,11 @@ export class HomeworkModule {
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">รายวิชา</label>
               <select id="hw-course" class="input-field">
-                ${availableCourses.map(c => `<option value="${c.id}">${c.code} - ${c.name} (${c.teacher})</option>`).join('')}
+                ${availableCourses.map(c => `
+                  <option value="${c.id}" ${isEdit && targetHw.courseId === c.id ? 'selected' : (this.selectedCourseId === c.id ? 'selected' : '')}>
+                    ${c.code} - ${c.name} (${c.teacher})
+                  </option>
+                `).join('')}
               </select>
             </div>
 
@@ -519,8 +542,11 @@ export class HomeworkModule {
               <div>
                 <label class="block text-[11px] font-semibold text-slate-600 mb-1">ระดับชั้น</label>
                 <select id="hw-target-grade" class="input-field py-1 text-xs">
-                  <option value="All">🌐 ทุกระดับชั้น (All Grades)</option>
-                  ${availableGrades.filter(g => g !== 'All').map(g => `<option value="${g}">${g}</option>`).join('')}
+                  ${availableGrades.map(g => `
+                    <option value="${g}" ${isEdit && targetHw.targetGrade === g ? 'selected' : ''}>
+                      ${g === 'All' ? '🌐 ทุกระดับชั้น (All Grades)' : g}
+                    </option>
+                  `).join('')}
                 </select>
               </div>
 
@@ -533,28 +559,30 @@ export class HomeworkModule {
 
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">หัวข้อการบ้าน</label>
-              <input type="text" id="hw-title" required class="input-field" placeholder="เช่น แบบฝึกหัดบทที่ 2 เรื่อง พีชคณิต">
+              <input type="text" id="hw-title" required class="input-field" value="${isEdit ? decodeMojibakeThai(targetHw.title) : ''}" placeholder="เช่น แบบฝึกหัดบทที่ 2 เรื่อง พีชคณิต">
             </div>
 
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">คำอธิบายและโจทย์</label>
-              <textarea id="hw-detail" rows="4" required class="input-field" placeholder="ระบุรายละเอียดโจทย์ขั้นตอนการทำ..."></textarea>
+              <textarea id="hw-detail" rows="4" required class="input-field" placeholder="ระบุรายละเอียดโจทย์ขั้นตอนการทำ...">${isEdit ? decodeMojibakeThai(targetHw.detail) : ''}</textarea>
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">กำหนดส่ง</label>
-                <input type="date" id="hw-date" required class="input-field" value="${new Date().toISOString().substring(0, 10)}">
+                <input type="date" id="hw-date" required class="input-field" value="${isEdit ? targetHw.dueDate : new Date().toISOString().substring(0, 10)}">
               </div>
               <div>
                 <label class="block text-xs font-semibold text-slate-600 mb-1">คะแนนเต็ม</label>
-                <input type="number" id="hw-pts" value="20" required class="input-field">
+                <input type="number" id="hw-pts" value="${isEdit ? targetHw.maxPoints : 20}" required class="input-field">
               </div>
             </div>
 
             <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
               <button type="button" id="close-hw-btn" class="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-sm font-medium">ยกเลิก</button>
-              <button type="submit" class="btn-primary px-6 py-2 rounded-xl text-sm font-medium font-heading">สั่งการบ้าน</button>
+              <button type="submit" class="btn-primary px-6 py-2 rounded-xl text-sm font-medium font-heading">
+                ${isEdit ? 'บันทึกการแก้ไข' : 'สั่งการบ้าน'}
+              </button>
             </div>
           </form>
         </div>
@@ -569,15 +597,16 @@ export class HomeworkModule {
     const updateRoomChecklist = () => {
       const selectedGrade = gradeSelect.value;
       const rooms = getRoomsForGrade(selectedGrade);
+      const currentSelectedRooms = isEdit && targetHw.targetRooms ? targetHw.targetRooms : ['All'];
 
       checklistContainer.innerHTML = `
         <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-indigo-100/60">
-          <input type="checkbox" name="hw_room_check" value="All" checked class="w-4 h-4 text-indigo-600 rounded">
+          <input type="checkbox" name="hw_room_check" value="All" ${currentSelectedRooms.includes('All') ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded">
           <span>🌐 ทุกห้อง</span>
         </label>
         ${rooms.map(r => `
           <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-indigo-100/60">
-            <input type="checkbox" name="hw_room_check" value="${r}" class="w-4 h-4 text-indigo-600 rounded">
+            <input type="checkbox" name="hw_room_check" value="${r}" ${currentSelectedRooms.includes(r) ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded">
             <span>🏫 ห้อง ${r}</span>
           </label>
         `).join('')}
@@ -598,19 +627,32 @@ export class HomeworkModule {
       let selectedRooms = Array.from(checkboxes).map(cb => cb.value);
       if (selectedRooms.length === 0) selectedRooms = ['All'];
 
-      const payload = {
-        courseId: courseId,
-        courseName: targetCourse ? targetCourse.name : '',
-        title: document.getElementById('hw-title').value.trim(),
-        detail: document.getElementById('hw-detail').value.trim(),
-        dueDate: document.getElementById('hw-date').value,
-        maxPoints: parseInt(document.getElementById('hw-pts').value, 10),
-        targetGrade: document.getElementById('hw-target-grade').value,
-        targetRooms: selectedRooms,
-        submissions: []
-      };
-
-      firebaseService.addItem('homework', payload);
+      if (isEdit) {
+        const updates = {
+          courseId: courseId,
+          courseName: targetCourse ? targetCourse.name : (targetHw.courseName || ''),
+          title: document.getElementById('hw-title').value.trim(),
+          detail: document.getElementById('hw-detail').value.trim(),
+          dueDate: document.getElementById('hw-date').value,
+          maxPoints: parseInt(document.getElementById('hw-pts').value, 10),
+          targetGrade: document.getElementById('hw-target-grade').value,
+          targetRooms: selectedRooms
+        };
+        firebaseService.updateItem('homework', targetHw.id, updates);
+      } else {
+        const payload = {
+          courseId: courseId,
+          courseName: targetCourse ? targetCourse.name : '',
+          title: document.getElementById('hw-title').value.trim(),
+          detail: document.getElementById('hw-detail').value.trim(),
+          dueDate: document.getElementById('hw-date').value,
+          maxPoints: parseInt(document.getElementById('hw-pts').value, 10),
+          targetGrade: document.getElementById('hw-target-grade').value,
+          targetRooms: selectedRooms,
+          submissions: []
+        };
+        firebaseService.addItem('homework', payload);
+      }
       modalEl.remove();
       refreshCb();
     });
@@ -625,9 +667,31 @@ export class HomeworkModule {
     const modalHTML = `
       <div id="sub-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
         <div class="glass-card w-full max-w-lg p-6 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] overflow-y-auto">
-          <div class="flex justify-between items-center pb-4 border-b border-slate-100">
-            <h3 class="text-xl font-bold text-slate-900 font-heading">📤 ส่งการบ้าน: ${decodeMojibakeThai(hw.title)}</h3>
+          <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+            <h3 class="text-xl font-bold text-slate-900 font-heading">📤 ส่งการบ้าน</h3>
             <button id="close-sub-modal" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
+          </div>
+
+          <!-- Homework Problem & Instructions Info Card -->
+          <div class="mt-4 p-4 rounded-2xl bg-indigo-50/80 border border-indigo-100/90 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="bg-indigo-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded-full font-heading">
+                📚 ${decodeMojibakeThai(hw.courseName || 'ทั่วไป')}
+              </span>
+              <div class="flex items-center gap-3 text-[11px] text-slate-600 font-heading">
+                <span>📅 กำหนดส่ง: <strong class="text-indigo-900 font-bold">${hw.dueDate || 'ไม่ระบุ'}</strong></span>
+                <span>💯 คะแนนเต็ม: <strong class="text-emerald-700 font-bold">${hw.maxPoints || 20} คะแนน</strong></span>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="font-extrabold text-slate-900 font-heading text-sm flex items-center gap-1.5">
+                <span>📌 โจทย์/หัวข้อการบ้าน:</span> ${decodeMojibakeThai(hw.title)}
+              </h4>
+              <div class="text-xs text-slate-700 leading-relaxed mt-1.5 whitespace-pre-line bg-white/90 p-3 rounded-xl border border-indigo-100 shadow-sm">
+                ${decodeMojibakeThai(hw.detail || 'ไม่มีรายละเอียดเพิ่มเติม')}
+              </div>
+            </div>
           </div>
 
           <form id="sub-form" class="space-y-4 mt-4">
@@ -761,7 +825,12 @@ export class HomeworkModule {
               <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                 <div class="flex justify-between items-center">
                   <div class="font-bold text-slate-900 font-heading">${decodeMojibakeThai(sub.studentName)} (${sub.studentId})</div>
-                  <div class="text-xs text-slate-500 font-mono">${sub.submittedAt}</div>
+                  <div class="flex items-center gap-3">
+                    <div class="text-xs text-slate-500 font-mono">${sub.submittedAt}</div>
+                    <button type="button" data-del-sub="${sub.studentId}" data-student-name="${decodeMojibakeThai(sub.studentName)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2.5 py-1 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-200 transition-all flex items-center gap-1">
+                      <span>🗑️</span> ลบงานชิ้นนี้
+                    </button>
+                  </div>
                 </div>
 
                 <div class="text-xs text-slate-700 bg-white p-3.5 rounded-xl border border-slate-200 space-y-2">
@@ -769,13 +838,15 @@ export class HomeworkModule {
                   
                   ${sub.imageFile ? `
                     <div class="pt-2 border-t border-slate-100">
-                      <div class="font-bold text-slate-700 mb-1.5 flex items-center gap-1">
-                        <span>📸 รูปภาพงานที่ส่ง (Cloudinary CDN):</span>
+                      <div class="font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                        <span class="flex items-center gap-1">📸 รูปภาพงานที่ส่ง (Cloudinary CDN):</span>
+                        <span class="text-[11px] font-semibold text-indigo-600">🔍 คลิกรูปเพื่อดูขนาดย่อ/ขยายรูปเต็ม</span>
                       </div>
-                      <div class="max-w-md rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-black/5">
-                        <a href="${sub.imageFile}" target="_blank" title="คลิกเพื่อขยายดูรูปใหญ่">
-                          <img src="${sub.imageFile}" class="w-full max-h-64 object-contain hover:scale-105 transition-transform cursor-pointer">
-                        </a>
+                      <div class="max-w-md rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900/5 relative group cursor-pointer" data-preview-img="${sub.imageFile}" data-student-name="${decodeMojibakeThai(sub.studentName)}">
+                        <img src="${sub.imageFile}" class="w-full max-h-64 object-contain group-hover:scale-105 transition-transform">
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-[2px]">
+                          <span class="text-base">🔍</span> คลิกเพื่อเปิดรูปภาพขนาดใหญ่
+                        </div>
                       </div>
                     </div>
                   ` : ''}
@@ -805,18 +876,67 @@ export class HomeworkModule {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     const modalEl = document.getElementById('grade-modal');
 
+    // Bind Image Lightbox Modal Preview Handler
+    modalEl.querySelectorAll('[data-preview-img]').forEach(box => {
+      box.addEventListener('click', (e) => {
+        const imgUrl = e.currentTarget.dataset.previewImg;
+        const stdName = e.currentTarget.dataset.studentName;
+        showImagePreviewModal({
+          imageUrl: imgUrl,
+          title: `🖼️ รูปภาพงานส่งของนักเรียน`,
+          studentName: stdName
+        });
+      });
+    });
+
+    // Bind Delete Student Submission Handler
+    modalEl.querySelectorAll('[data-del-sub]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const stdId = e.currentTarget.dataset.delSub;
+        const stdName = e.currentTarget.dataset.studentName || 'นักเรียน';
+
+        const confirmed = await showConfirmModal({
+          title: '🗑️ ยืนยันการลบการส่งงาน',
+          message: `คุณแน่ใจหรือไม่ว่าต้องการลบชิ้นงานการบ้านที่ส่งของ "${decodeMojibakeThai(stdName)}"? หลังจากลบแล้วนักเรียนจะสามารถเข้าส่งงานใหม่อีกครั้งได้`,
+          confirmText: 'ลบการส่งงาน',
+          cancelText: 'ยกเลิก'
+        });
+
+        if (confirmed) {
+          const allHw = firebaseService.getCollection('homework');
+          const activeHw = allHw.find(h => h.id === hw.id) || hw;
+          
+          let currentSubs = Array.isArray(activeHw.submissions) ? activeHw.submissions : [];
+          currentSubs = currentSubs.filter(s => s.studentId !== stdId);
+
+          activeHw.submissions = currentSubs;
+          hw.submissions = currentSubs;
+
+          await firebaseService.updateItem('homework', hw.id, { submissions: currentSubs });
+
+          modalEl.remove();
+          this.showGradingModal(activeHw, refreshCb);
+          refreshCb();
+        }
+      });
+    });
+
     modalEl.querySelectorAll('#close-grade-modal, #close-grade-btn').forEach(b => b.addEventListener('click', () => {
       const updatedSubmissions = [...submissions];
       modalEl.querySelectorAll('.sub-score-input').forEach(input => {
         const idx = parseInt(input.dataset.subIdx, 10);
         const val = input.value.trim();
-        updatedSubmissions[idx].score = val !== '' ? parseInt(val, 10) : null;
-        updatedSubmissions[idx].status = val !== '' ? 'Graded' : 'Pending';
+        if (updatedSubmissions[idx]) {
+          updatedSubmissions[idx].score = val !== '' ? parseInt(val, 10) : null;
+          updatedSubmissions[idx].status = val !== '' ? 'Graded' : 'Pending';
+        }
       });
 
       modalEl.querySelectorAll('.sub-feedback-input').forEach(input => {
         const idx = parseInt(input.dataset.subIdx, 10);
-        updatedSubmissions[idx].feedback = input.value.trim();
+        if (updatedSubmissions[idx]) {
+          updatedSubmissions[idx].feedback = input.value.trim();
+        }
       });
 
       firebaseService.updateItem('homework', hw.id, { submissions: updatedSubmissions });

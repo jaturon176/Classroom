@@ -78,7 +78,7 @@ export class QuizModule {
         q.results.forEach(r => {
           totalScoreSum += (r.score || 0);
           totalMaxSum += (r.maxScore || (q.questions ? q.questions.length : 1));
-          if (r.maxScore > 0 && (r.score / r.maxScore) >= 0.6) {
+          if (r.maxScore > 0 && (r.score / r.maxScore) >= 0.5) {
             passedAttempts++;
           }
         });
@@ -163,7 +163,7 @@ export class QuizModule {
             </div>
             <div class="mt-4">
               <div class="text-slate-500 text-xs font-heading font-semibold uppercase tracking-wider">อัตราการสอบผ่านเกณฑ์</div>
-              <div class="text-3xl font-extrabold text-slate-900 font-heading mt-1">${passRatePercent}% <span class="text-xs font-normal text-slate-500">(>= 60%)</span></div>
+              <div class="text-3xl font-extrabold text-slate-900 font-heading mt-1">${passRatePercent}% <span class="text-xs font-normal text-slate-500">(>= 50%)</span></div>
             </div>
           </div>
         </div>
@@ -236,9 +236,9 @@ export class QuizModule {
                         ` : myResult ? `
                           <div class="flex items-center gap-2">
                             <span class="px-3.5 py-1.5 rounded-xl text-xs font-bold ${
-                              (myResult.score / myResult.maxScore) >= 0.6 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                              (myResult.score / myResult.maxScore) >= 0.5 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
                             }">
-                              ${(myResult.score / myResult.maxScore) >= 0.6 ? '✅' : '⚠️'} คะแนน: ${myResult.score}/${myResult.maxScore}
+                              ${(myResult.score / myResult.maxScore) >= 0.5 ? '✅' : '⚠️'} คะแนน: ${myResult.score}/${myResult.maxScore}
                             </span>
                             <button data-take-quiz="${q.id}" class="btn-secondary text-xs px-3.5 py-1.5 rounded-xl font-heading font-semibold">ทำข้อสอบอีกครั้ง</button>
                           </div>
@@ -444,7 +444,7 @@ export class QuizModule {
               const score = r.score || 0;
               const maxScore = r.maxScore || 1;
               const percent = Math.round((score / maxScore) * 100);
-              const isPassed = percent >= 60;
+              const isPassed = percent >= 50;
 
               return `
                 <tr class="hover:bg-slate-50 transition-colors">
@@ -1021,7 +1021,7 @@ export class QuizModule {
   // Render Quiz Results Summary (Displays score summary without revealing answer key)
   renderQuizResultSummary(containerEl, quiz, score, maxScore) {
     const percent = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
-    const isPassed = percent >= 60;
+    const isPassed = percent >= 50;
 
     containerEl.innerHTML = `
       <div class="space-y-8 animate-fade-in max-w-2xl mx-auto py-8">
