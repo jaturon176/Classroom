@@ -1,15 +1,15 @@
 /**
  * Firebase Realtime Database Service (Central Primary Server Engine)
  * Project: classroom-app-4bd14
- * Database URL: https://classroom-app-4bd14-default-rtdb.firebaseio.com
+ * Database Location: Singapore (asia-southeast1)
+ * Database URL: https://classroom-app-4bd14-default-rtdb.asia-southeast1.firebasedatabase.app
  * 
  * Architecture:
  * 1. 🌐 Central Primary Server (Single Source of Truth):
- *    - All devices (PC, iPad, iPhone, Android) connect directly to Firebase Realtime Database.
- *    - Central Server holds the authoritative dataset.
+ *    - All devices (PC, iPad, iPhone, Android) connect directly to Firebase Realtime Database Singapore Node.
  *    - Real-time websocket subscription (`onValue`) syncs any mutation to all connected devices within 0.1s.
  * 2. 📱 LocalStorage (Offline Backup & Fast Startup Cache):
- *    - Acts purely as a local cache for 0ms initial render while fetching central server data.
+ *    - Pre-seeded fallback dataset ensuring instant 0ms app start.
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -19,7 +19,7 @@ import { autoFixObjectMojibake } from './mojibakeDecoder.js';
 
 export const FIREBASE_CONFIG = {
   projectId: "classroom-app-4bd14",
-  databaseURL: "https://classroom-app-4bd14-default-rtdb.firebaseio.com"
+  databaseURL: "https://classroom-app-4bd14-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 class FirebaseRealtimeService {
@@ -29,16 +29,27 @@ class FirebaseRealtimeService {
     this.isRealtimeConnected = false;
     this.collections = ['users', 'courses', 'homework', 'quizzes', 'announcements', 'attendance'];
     
+    // Always initialize local store cache first so fresh devices can log in instantly
+    this.initLocalStoreFallback();
     this.initFirebaseRealtime();
+  }
+
+  initLocalStoreFallback() {
+    if (!localStorage.getItem('ag_users')) localStorage.setItem('ag_users', JSON.stringify(INITIAL_USERS));
+    if (!localStorage.getItem('ag_courses')) localStorage.setItem('ag_courses', JSON.stringify(INITIAL_COURSES));
+    if (!localStorage.getItem('ag_homework')) localStorage.setItem('ag_homework', JSON.stringify(INITIAL_HOMEWORK));
+    if (!localStorage.getItem('ag_quizzes')) localStorage.setItem('ag_quizzes', JSON.stringify([SAMPLE_QUIZ]));
+    if (!localStorage.getItem('ag_announcements')) localStorage.setItem('ag_announcements', JSON.stringify(INITIAL_ANNOUNCEMENTS));
+    if (!localStorage.getItem('ag_attendance')) localStorage.setItem('ag_attendance', JSON.stringify(INITIAL_ATTENDANCE));
   }
 
   // 🌐 Initialize Central Firebase Realtime Database & Setup 0.1s Cross-Device Sync
   async initFirebaseRealtime() {
     try {
       this.app = initializeApp(FIREBASE_CONFIG);
-      this.db = getDatabase(this.app);
+      this.db = getDatabase(this.app, FIREBASE_CONFIG.databaseURL);
       this.isRealtimeConnected = true;
-      console.log('🌐 Connected to Central Primary Server (Firebase Realtime DB)');
+      console.log('🌐 Connected to Central Primary Server (Singapore asia-southeast1 Realtime DB)');
 
       // 1. Seed Central Database if completely empty
       await this.ensureCentralServerSeeded();
@@ -60,19 +71,20 @@ class FirebaseRealtimeService {
             }
           }
 
-          // Overwrite local cache with Central Primary Server Data
-          localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
-          
-          // Broadcast live update to refresh active UI across all connected devices
-          window.dispatchEvent(new CustomEvent('ag_realtime_update', {
-            detail: { collection: key, items: itemsArray }
-          }));
+          if (itemsArray.length > 0) {
+            // Overwrite local cache with Central Primary Server Data
+            localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
+            
+            // Broadcast live update to refresh active UI across all connected devices
+            window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+              detail: { collection: key, items: itemsArray }
+            }));
+          }
         });
       });
     } catch (err) {
       console.warn('Central server connection warning (using offline local cache):', err);
       this.isRealtimeConnected = false;
-      this.initLocalStoreFallback();
     }
   }
 
@@ -106,24 +118,27 @@ class FirebaseRealtimeService {
     return map;
   }
 
-  initLocalStoreFallback() {
-    if (!localStorage.getItem('ag_users')) localStorage.setItem('ag_users', JSON.stringify(INITIAL_USERS));
-    if (!localStorage.getItem('ag_courses')) localStorage.setItem('ag_courses', JSON.stringify(INITIAL_COURSES));
-    if (!localStorage.getItem('ag_homework')) localStorage.setItem('ag_homework', JSON.stringify(INITIAL_HOMEWORK));
-    if (!localStorage.getItem('ag_quizzes')) localStorage.setItem('ag_quizzes', JSON.stringify([SAMPLE_QUIZ]));
-    if (!localStorage.getItem('ag_announcements')) localStorage.setItem('ag_announcements', JSON.stringify(INITIAL_ANNOUNCEMENTS));
-    if (!localStorage.getItem('ag_attendance')) localStorage.setItem('ag_attendance', JSON.stringify(INITIAL_ATTENDANCE));
-  }
-
   // 📱 Read Collection (Reads from Central Server Data Cache with Mojibake Repair)
   getCollection(key) {
     const raw = localStorage.getItem('ag_' + key) || '[]';
     try {
       const parsed = JSON.parse(raw);
-      return autoFixObjectMojibake(parsed);
+      if (parsed && parsed.length > 0) {
+        return autoFixObjectMojibake(parsed);
+      }
     } catch (e) {
-      return [];
+      // Fallback
     }
+
+    // Fallback to initial seed if empty
+    if (key === 'users') return INITIAL_USERS;
+    if (key === 'courses') return INITIAL_COURSES;
+    if (key === 'homework') return INITIAL_HOMEWORK;
+    if (key === 'quizzes') return [SAMPLE_QUIZ];
+    if (key === 'announcements') return INITIAL_ANNOUNCEMENTS;
+    if (key === 'attendance') return INITIAL_ATTENDANCE;
+
+    return [];
   }
 
   // Save Collection

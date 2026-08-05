@@ -5,6 +5,7 @@
  */
 
 import { firebaseService } from '../services/firebaseService.js';
+import { INITIAL_USERS } from '../services/sampleDataService.js';
 import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
 import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
 
@@ -75,16 +76,25 @@ export class RBACModule {
     return this.currentUser && ['Admin', 'Teacher'].includes(this.currentUser.role);
   }
 
-  // Authentication Logic
+  // Authentication Logic (with Fail-Safe Initial Users Fallback)
   login(loginInput, password) {
-    const users = firebaseService.getCollection('users');
+    let users = firebaseService.getCollection('users');
     const input = loginInput.trim().toLowerCase();
 
-    const user = users.find(u => 
+    let user = users.find(u => 
       (u.username && u.username.toLowerCase() === input) ||
       (u.studentId && u.studentId.toLowerCase() === input) ||
       (u.email && u.email.toLowerCase() === input)
     );
+
+    // Fail-safe check against INITIAL_USERS if users dataset is loading
+    if (!user) {
+      user = INITIAL_USERS.find(u => 
+        (u.username && u.username.toLowerCase() === input) ||
+        (u.studentId && u.studentId.toLowerCase() === input) ||
+        (u.email && u.email.toLowerCase() === input)
+      );
+    }
 
     if (!user) {
       return { success: false, message: 'ไม่พบบัญชีผู้ใช้นี้ในระบบ' };
@@ -100,8 +110,11 @@ export class RBACModule {
   }
 
   quickLogin(role) {
-    const users = firebaseService.getCollection('users');
-    const user = users.find(u => u.role === role);
+    let users = firebaseService.getCollection('users');
+    if (!users || users.length === 0) users = INITIAL_USERS;
+    let user = users.find(u => u.role === role);
+    if (!user) user = INITIAL_USERS.find(u => u.role === role);
+    
     if (user) {
       this.saveUser(user);
     }
@@ -318,11 +331,11 @@ export class RBACModule {
               ⚡
             </div>
             <h2 class="text-2xl font-bold font-heading text-slate-900 tracking-tight">เข้าสู่ระบบ Cloud Classroom</h2>
-            <p class="text-xs text-slate-500">ระบบบริหารจัดการห้องเรียนยุคใหม่ (Firestore & RBAC)</p>
+            <p class="text-xs text-slate-500">ระบบบริหารจัดการห้องเรียนยุคใหม่ (Realtime DB & RBAC)</p>
           </div>
 
           <div class="p-4 bg-sky-50/70 rounded-2xl border border-sky-200/80 space-y-2.5">
-            <div class="text-[11px] font-bold font-heading text-sky-800 uppercase tracking-wider text-center">⚡ ทดลองเข้าสู่ระบบทันที (1-Click Demo Login)</div>
+            <div class="text-[11px] font-bold font-heading text-sky-800 uppercase tracking-wider text-center">⚡ ทดลองเข้าสู่ระบบทันที (1-CLICK DEMO LOGIN)</div>
             <div class="grid grid-cols-3 gap-2">
               <button id="quick-admin" class="py-2 px-1 rounded-xl text-xs font-bold font-heading bg-purple-100 hover:bg-purple-200 text-purple-700 transition-colors">
                 👑 Admin
@@ -339,7 +352,7 @@ export class RBACModule {
           <form id="login-form" class="space-y-4">
             <div>
               <label class="block text-xs font-bold font-heading text-slate-700 mb-1">ชื่อผู้ใช้ / รหัสนักเรียน / อีเมล</label>
-              <input type="text" id="login-input" required class="input-field" placeholder="เช่น 09513 หรือ admin">
+              <input type="text" id="login-input" required class="input-field" placeholder="เช่น admin, prasert, หรือ STD6701">
             </div>
 
             <div>
@@ -571,7 +584,7 @@ export class RBACModule {
 
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">อีเมล</label>
-              <input type="email" id="usr-email" value="${isEdit ? targetUser.email : ''}" required class="input-field" placeholder="student@school.ac.th">
+              <input type="text" id="usr-email" value="${isEdit ? targetUser.email : ''}" required class="input-field" placeholder="student@school.ac.th">
             </div>
 
             <div>
