@@ -9,12 +9,11 @@
  * - Teacher Score Directory & Filtering per Student / per Classroom Room.
  * - Delete Student Score Attempt (Reset Score so Student can Re-take).
  * - Toggle Open / Close Quiz Access (เปิด/ปิด รับการทำแบบทดสอบ).
- * - Pure DOM-based Question Builder (พิมพ์โจทย์/ตัวเลือกแล้วกดเพิ่มข้อ ข้อมูลเดิมไม่ถูกแตะต้อง ไม่ลบหาย 100%).
  */
 
-import { firebaseService } from '../services/firebaseService.js?v=5.0';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=5.0';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=5.0';
+import { firebaseService } from '../services/firebaseService.js?v=4.0';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=4.0';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=4.0';
 
 export class QuizModule {
   constructor(rbac) {
@@ -557,7 +556,7 @@ export class QuizModule {
     });
   }
 
-  // Quiz Editor Modal (Pure DOM-based Builder: Existing DOM Inputs are NEVER destroyed when adding questions!)
+  // Quiz Editor Modal (With question points, no explanation box, and Question/Option Image Uploads)
   showQuizEditorModal(quiz, refreshCb, optionCountChoice = 4) {
     const isEdit = !!quiz;
     const courses = firebaseService.getCollection('courses');
@@ -567,10 +566,10 @@ export class QuizModule {
       ? ['A. ตัวเลือกที่ 1', 'B. ตัวเลือกที่ 2', 'C. ตัวเลือกที่ 3', 'D. ตัวเลือกที่ 4', 'E. ตัวเลือกที่ 5']
       : ['A. ตัวเลือกที่ 1', 'B. ตัวเลือกที่ 2', 'C. ตัวเลือกที่ 3', 'D. ตัวเลือกที่ 4'];
 
-    const initialQuestions = isEdit && quiz.questions && quiz.questions.length > 0 ? quiz.questions : [
+    let questions = isEdit && quiz.questions ? JSON.parse(JSON.stringify(quiz.questions)) : [
       {
         id: 'q1',
-        questionText: '',
+        questionText: 'ข้อใดคือคำตอบที่ถูกต้อง?',
         image: '',
         options: [...defaultOptions],
         optionImages: optionCount === 5 ? ['', '', '', '', ''] : ['', '', '', ''],
@@ -594,13 +593,13 @@ export class QuizModule {
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อชุดแบบทดสอบ <span class="text-rose-500">*</span></label>
-                <input type="text" id="qz-title" value="${isEdit ? decodeMojibakeThai(quiz.title) : ''}" required class="input-field" placeholder="เช่น แบบทดสอบวิทยาศาสตร์ ม.1">
+                <input type="text" id="qz-title" value="${isEdit ? quiz.title : ''}" required class="input-field" placeholder="เช่น แบบทดสอบวิทยาศาสตร์ ม.1">
               </div>
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">รายวิชา</label>
                 <select id="qz-course" class="input-field">
-                  ${courses.length > 0 ? courses.map(c => `<option value="${c.id}" ${isEdit && quiz.courseId === c.id ? 'selected' : ''}>${c.code || ''} - ${decodeMojibakeThai(c.name)}</option>`).join('') : '<option value="general">ทั่วไป</option>'}
+                  ${courses.length > 0 ? courses.map(c => `<option value="${c.id}" ${isEdit && quiz.courseId === c.id ? 'selected' : ''}>${c.code || ''} - ${c.name}</option>`).join('') : '<option value="general">ทั่วไป</option>'}
                 </select>
               </div>
 
@@ -611,7 +610,7 @@ export class QuizModule {
 
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">คำอธิบายข้อสอบ</label>
-                <input type="text" id="qz-desc" value="${isEdit ? decodeMojibakeThai(quiz.description || '') : ''}" class="input-field" placeholder="ระบุเกณฑ์หรือคำแนะนำเพิ่มเติม...">
+                <input type="text" id="qz-desc" value="${isEdit ? (quiz.description || '') : ''}" class="input-field" placeholder="ระบุเกณฑ์หรือคำแนะนำเพิ่มเติม...">
               </div>
             </div>
 
@@ -641,143 +640,104 @@ export class QuizModule {
     const scrollContainer = modalEl.querySelector('#quiz-modal-scroll');
     const container = modalEl.querySelector('#questions-container');
 
-    // Helper: Create Question HTML Card without destroying existing DOM nodes
-    const createQuestionCardHTML = (q, idx) => {
-      const opts = q.options || defaultOptions;
-      return `
-        <div class="question-card p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 relative" data-q-card-idx="${idx}">
+    const renderQuestions = () => {
+      container.innerHTML = questions.map((q, idx) => `
+        <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-4 relative">
           <div class="flex justify-between items-center border-b border-slate-200/60 pb-3">
             <div class="flex items-center gap-3">
-              <span class="q-card-number font-bold font-heading text-indigo-700 text-sm">ข้อที่ ${idx + 1}</span>
+              <span class="font-bold font-heading text-indigo-700 text-sm">ข้อที่ ${idx + 1}</span>
               
-              <!-- Question Score Input -->
+              <!-- Question Score Input (กำหนดคะแนน) -->
               <div class="flex items-center gap-1.5 bg-white px-3 py-1 rounded-xl border border-slate-200 text-xs">
                 <span class="font-semibold text-slate-600">คะแนน:</span>
-                <input type="number" min="1" value="${q.points || 1}" class="q-points-field w-14 font-mono font-bold text-center text-indigo-600 focus:outline-none">
+                <input type="number" min="1" value="${q.points || 1}" data-q-idx="${idx}" class="q-points-input w-14 font-mono font-bold text-center text-indigo-600 focus:outline-none">
                 <span class="text-slate-500 font-normal">คะแนน</span>
               </div>
             </div>
 
-            <button type="button" class="btn-remove-q-card text-rose-600 hover:text-rose-800 text-xs font-bold">🗑️ ลบข้อนี้</button>
+            ${questions.length > 1 ? `<button type="button" data-remove-q="${idx}" class="text-rose-600 hover:text-rose-800 text-xs font-bold">🗑️ ลบข้อนี้</button>` : ''}
           </div>
 
-          <!-- Question Text & Image Upload -->
+          <!-- Question Text & Question Image Upload -->
           <div class="space-y-2">
             <label class="block text-xs font-semibold text-slate-700">โจทย์คำถาม <span class="text-rose-500">*</span></label>
-            <input type="text" class="q-text-field input-field text-xs" value="${q.questionText ? decodeMojibakeThai(q.questionText) : ''}" required placeholder="พิมพ์โจทย์คำถามที่นี่...">
+            <input type="text" data-q-idx="${idx}" class="q-text-input input-field text-xs" value="${q.questionText || ''}" required placeholder="พิมพ์โจทย์คำถามที่นี่...">
             
+            <!-- Image Attachment for Question -->
             <div class="flex items-center gap-3 pt-1">
               <label class="cursor-pointer bg-white hover:bg-slate-100 text-slate-700 border border-slate-300 text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 font-medium transition-colors">
                 <span>🖼️ แนบรูปภาพโจทย์</span>
-                <input type="file" accept="image/*" class="q-img-file-field hidden">
+                <input type="file" accept="image/*" data-q-img-file="${idx}" class="hidden">
               </label>
-              <input type="url" class="q-img-url-field input-field py-1 text-xs" value="${q.image || ''}" placeholder="หรือวาง URL รูปภาพโจทย์...">
+              <input type="url" data-q-img-url="${idx}" class="q-img-url-input input-field py-1 text-xs" value="${q.image || ''}" placeholder="หรือวาง URL รูปภาพโจทย์...">
             </div>
-            <div class="q-img-preview-box mt-2 ${q.image ? '' : 'hidden'} max-w-xs rounded-xl overflow-hidden border border-slate-200 shadow-sm">
-              <img src="${q.image || ''}" class="q-img-preview-tag w-full h-auto object-cover">
-            </div>
+            ${q.image ? `<div class="mt-2 max-w-xs rounded-xl overflow-hidden border border-slate-200 shadow-sm"><img src="${q.image}" class="w-full h-auto object-cover"></div>` : ''}
           </div>
 
-          <!-- Options Grid -->
+          <!-- Options Grid (4 or 5 options with option images) -->
           <div class="space-y-2">
             <label class="block text-xs font-semibold text-slate-700">ตัวเลือก (เลือกปุ่มวิทยุสำหรับคำตอบที่ถูกต้อง)</label>
             <div class="space-y-3">
-              ${opts.map((opt, oIdx) => {
+              ${(q.options || defaultOptions).map((opt, oIdx) => {
                 const optImg = (q.optionImages && q.optionImages[oIdx]) || '';
                 return `
                   <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-2">
                     <div class="flex items-center gap-2">
-                      <input type="radio" name="correct_radio_${idx}" value="${oIdx}" ${q.correctAnswer === oIdx ? 'checked' : ''} class="q-correct-radio-field w-4 h-4 text-indigo-600 shrink-0">
-                      <input type="text" class="q-opt-field input-field py-1 text-xs" value="${decodeMojibakeThai(opt)}" required placeholder="ตัวเลือก ${oIdx + 1}">
+                      <input type="radio" name="correct_${idx}" value="${oIdx}" ${q.correctAnswer === oIdx ? 'checked' : ''} class="q-correct-radio w-4 h-4 text-indigo-600 shrink-0" data-q-idx="${idx}">
+                      <input type="text" data-q-idx="${idx}" data-o-idx="${oIdx}" class="q-opt-input input-field py-1 text-xs" value="${opt}" required placeholder="ตัวเลือก ${oIdx + 1}">
                     </div>
 
+                    <!-- Image Attachment for Option -->
                     <div class="flex items-center gap-2 pl-6">
                       <label class="cursor-pointer bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 text-[11px] px-2.5 py-1 rounded-lg flex items-center gap-1 font-medium">
                         <span>🖼️ รูปตัวเลือก</span>
-                        <input type="file" accept="image/*" class="opt-img-file-field hidden" data-o-idx="${oIdx}">
+                        <input type="file" accept="image/*" data-opt-img-file="${idx}_${oIdx}" class="hidden">
                       </label>
-                      <input type="url" class="opt-img-url-field input-field py-0.5 text-[11px]" value="${optImg}" placeholder="หรือวาง URL รูปภาพตัวเลือก...">
+                      <input type="url" data-opt-img-url="${idx}_${oIdx}" class="opt-img-url-input input-field py-0.5 text-[11px]" value="${optImg}" placeholder="หรือวาง URL รูปภาพตัวเลือก...">
                     </div>
-                    <div class="opt-img-preview-box pl-6 ${optImg ? '' : 'hidden'} max-w-xs rounded-lg overflow-hidden border border-slate-200">
-                      <img src="${optImg}" class="opt-img-preview-tag max-h-24 object-cover">
-                    </div>
+                    ${optImg ? `<div class="pl-6 max-w-xs rounded-lg overflow-hidden border border-slate-200"><img src="${optImg}" class="max-h-24 object-cover"></div>` : ''}
                   </div>
                 `;
               }).join('')}
             </div>
           </div>
         </div>
-      `;
-    };
+      `).join('');
 
-    // Update question card numbers (ข้อที่ 1, ข้อที่ 2...) & radio names
-    const reindexQuestionCards = () => {
-      const cards = container.querySelectorAll('.question-card');
-      cards.forEach((card, idx) => {
-        card.setAttribute('data-q-card-idx', idx);
-        const numLabel = card.querySelector('.q-card-number');
-        if (numLabel) numLabel.textContent = `ข้อที่ ${idx + 1}`;
-
-        const radios = card.querySelectorAll('.q-correct-radio-field');
-        radios.forEach(r => r.setAttribute('name', `correct_radio_${idx}`));
-
-        const deleteBtn = card.querySelector('.btn-remove-q-card');
-        if (deleteBtn) {
-          deleteBtn.style.display = cards.length > 1 ? 'block' : 'none';
-        }
-      });
-    };
-
-    // Bind event handlers on a question card
-    const bindQuestionCardEvents = (card) => {
-      // Remove question card
-      card.querySelector('.btn-remove-q-card')?.addEventListener('click', () => {
-        card.remove();
-        reindexQuestionCards();
+      // Bind dynamic remove & image file uploads
+      container.querySelectorAll('[data-remove-q]').forEach(b => {
+        b.addEventListener('click', (e) => {
+          const idx = parseInt(e.currentTarget.dataset.removeQ, 10);
+          questions.splice(idx, 1);
+          renderQuestions();
+        });
       });
 
-      // Question Image File Upload
-      const qFileInp = card.querySelector('.q-img-file-field');
-      const qUrlInp = card.querySelector('.q-img-url-field');
-      const qPreviewBox = card.querySelector('.q-img-preview-box');
-      const qPreviewTag = card.querySelector('.q-img-preview-tag');
-
-      qFileInp?.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            if (qUrlInp) qUrlInp.value = ev.target.result;
-            if (qPreviewTag) qPreviewTag.src = ev.target.result;
-            if (qPreviewBox) qPreviewBox.classList.remove('hidden');
-          };
-          reader.readAsDataURL(e.target.files[0]);
-        }
-      });
-
-      qUrlInp?.addEventListener('input', (e) => {
-        const val = e.target.value.trim();
-        if (val) {
-          if (qPreviewTag) qPreviewTag.src = val;
-          if (qPreviewBox) qPreviewBox.classList.remove('hidden');
-        } else {
-          if (qPreviewBox) qPreviewBox.classList.add('hidden');
-        }
-      });
-
-      // Option Image File Uploads
-      card.querySelectorAll('.opt-img-file-field').forEach(fileInp => {
-        fileInp.addEventListener('change', (e) => {
-          const wrapper = e.target.closest('.space-y-2');
-          const urlInp = wrapper ? wrapper.querySelector('.opt-img-url-field') : null;
-          const previewBox = wrapper ? wrapper.querySelector('.opt-img-preview-box') : null;
-          const previewTag = wrapper ? wrapper.querySelector('.opt-img-preview-tag') : null;
-
+      // Bind Question Image File Upload
+      container.querySelectorAll('[data-q-img-file]').forEach(inp => {
+        inp.addEventListener('change', (e) => {
+          const idx = parseInt(e.currentTarget.dataset.qImgFile, 10);
           if (e.target.files.length > 0) {
             const reader = new FileReader();
             reader.onload = (ev) => {
-              if (urlInp) urlInp.value = ev.target.result;
-              if (previewTag) previewTag.src = ev.target.result;
-              if (previewBox) previewBox.classList.remove('hidden');
+              questions[idx].image = ev.target.result;
+              renderQuestions();
+            };
+            reader.readAsDataURL(e.target.files[0]);
+          }
+        });
+      });
+
+      // Bind Option Image File Upload
+      container.querySelectorAll('[data-opt-img-file]').forEach(inp => {
+        inp.addEventListener('change', (e) => {
+          const [qIdx, oIdx] = e.currentTarget.dataset.optImgFile.split('_').map(Number);
+          if (e.target.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              if (!questions[qIdx].optionImages) questions[qIdx].optionImages = [];
+              questions[qIdx].optionImages[oIdx] = ev.target.result;
+              renderQuestions();
             };
             reader.readAsDataURL(e.target.files[0]);
           }
@@ -785,19 +745,10 @@ export class QuizModule {
       });
     };
 
-    // Render initial questions cards into DOM
-    initialQuestions.forEach((q, idx) => {
-      container.insertAdjacentHTML('beforeend', createQuestionCardHTML(q, idx));
-      const card = container.querySelector(`[data-q-card-idx="${idx}"]`);
-      if (card) bindQuestionCardEvents(card);
-    });
+    renderQuestions();
 
-    reindexQuestionCards();
-
-    // Pure DOM Append: Adding a new question appends to DOM without touching existing input boxes!
     modalEl.querySelector('#btn-add-question').addEventListener('click', () => {
-      const currentCount = container.querySelectorAll('.question-card').length;
-      const newQ = {
+      questions.push({
         id: `q_${Date.now()}`,
         questionText: '',
         image: '',
@@ -805,21 +756,12 @@ export class QuizModule {
         optionImages: optionCount === 5 ? ['', '', '', '', ''] : ['', '', '', ''],
         correctAnswer: 0,
         points: 1
-      };
-
-      container.insertAdjacentHTML('beforeend', createQuestionCardHTML(newQ, currentCount));
-      const newCard = container.querySelector(`[data-q-card-idx="${currentCount}"]`);
-      if (newCard) bindQuestionCardEvents(newCard);
-
-      reindexQuestionCards();
-
-      // Scroll to newly added question card
-      newCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+      renderQuestions();
     });
 
     modalEl.querySelectorAll('#close-quiz-editor, #close-quiz-editor-btn').forEach(b => b.addEventListener('click', () => modalEl.remove()));
 
-    // Submit Handler: Extracts current live DOM inputs from each question card
     modalEl.querySelector('#quiz-editor-form').addEventListener('submit', async (e) => {
       e.preventDefault();
 
@@ -831,25 +773,33 @@ export class QuizModule {
           return;
         }
 
-        const cards = container.querySelectorAll('.question-card');
-        const questionsData = Array.from(cards).map((card, idx) => {
-          const qText = (card.querySelector('.q-text-field')?.value || '').trim();
-          const points = parseInt(card.querySelector('.q-points-field')?.value, 10) || 1;
-          const qImg = (card.querySelector('.q-img-url-field')?.value || '').trim();
+        // Collect updated questions values safely
+        const updatedQuestions = questions.map((q, idx) => {
+          const qTextEl = container.querySelector(`.q-text-input[data-q-idx="${idx}"]`);
+          const qText = qTextEl ? qTextEl.value.trim() : (q.questionText || '');
 
-          const checkedRadio = card.querySelector('.q-correct-radio-field:checked');
-          const correctAnswer = checkedRadio ? parseInt(checkedRadio.value, 10) : 0;
+          const pointsEl = container.querySelector(`.q-points-input[data-q-idx="${idx}"]`);
+          const points = pointsEl ? (parseInt(pointsEl.value, 10) || 1) : (q.points || 1);
 
-          const optInputs = card.querySelectorAll('.q-opt-field');
+          const qImgUrlEl = container.querySelector(`.q-img-url-input[data-q-idx="${idx}"]`);
+          const qImgUrl = qImgUrlEl ? qImgUrlEl.value.trim() : '';
+
+          const radio = container.querySelector(`input[name="correct_${idx}"]:checked`);
+          const correctAnswer = radio ? parseInt(radio.value, 10) : 0;
+
+          const optInputs = container.querySelectorAll(`.q-opt-input[data-q-idx="${idx}"]`);
           const options = Array.from(optInputs).map(i => i.value.trim());
 
-          const optImgInputs = card.querySelectorAll('.opt-img-url-field');
-          const optionImages = Array.from(optImgInputs).map(i => i.value.trim());
+          const optionImages = options.map((_, oIdx) => {
+            const inp = container.querySelector(`.opt-img-url-input[data-opt-img-url="${idx}_${oIdx}"]`);
+            const urlVal = inp ? inp.value.trim() : '';
+            return urlVal || (q.optionImages && q.optionImages[oIdx]) || '';
+          });
 
           return {
-            id: `q_${idx + 1}`,
+            id: q.id || `q_${idx + 1}`,
             questionText: qText,
-            image: qImg,
+            image: qImgUrl || q.image || '',
             options: options.length > 0 ? options : defaultOptions,
             optionImages: optionImages,
             correctAnswer: correctAnswer,
@@ -869,7 +819,7 @@ export class QuizModule {
           description: description,
           optionCount: optionCount,
           isOpen: isEdit ? (quiz.isOpen !== false) : true,
-          questions: questionsData,
+          questions: updatedQuestions,
           results: (isEdit && quiz && Array.isArray(quiz.results)) ? quiz.results : []
         };
 
@@ -886,7 +836,7 @@ export class QuizModule {
 
         await showAlertModal({
           title: '✨ บันทึกแบบทดสอบเรียบร้อย',
-          message: `บันทึกชุดแบบทดสอบจำนวน ${questionsData.length} ข้อ (${optionCount} ตัวเลือก) เรียบร้อยแล้ว`,
+          message: `บันทึกชุดแบบทดสอบจำนวน ${updatedQuestions.length} ข้อ (${optionCount} ตัวเลือก) เรียบร้อยแล้ว`,
           type: 'success'
         });
 
