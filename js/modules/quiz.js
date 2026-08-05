@@ -462,7 +462,7 @@ export class QuizModule {
                   </td>
                   <td class="p-3.5 text-center font-mono text-slate-500 whitespace-nowrap">${r.completedAt || '-'}</td>
                   <td class="p-3.5 text-right whitespace-nowrap">
-                    <button data-del-score="${r.studentId}" class="text-rose-600 hover:text-rose-800 font-bold px-3 py-1.5 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-200 transition-all text-xs whitespace-nowrap">
+                    <button data-del-result-id="${r.id || (r.studentId + '_' + (r.completedAt || ''))}" data-student-name="${decodeMojibakeThai(r.studentName)}" class="text-rose-600 hover:text-rose-800 font-bold px-3 py-1.5 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-200 transition-all text-xs whitespace-nowrap">
                       🗑️ ลบคะแนน
                     </button>
                   </td>
@@ -473,22 +473,30 @@ export class QuizModule {
         </table>
       `;
 
-      // Bind delete score handler
-      tableContainer.querySelectorAll('[data-del-score]').forEach(btn => {
+      // Bind delete score handler (deletes ONLY the single selected attempt!)
+      tableContainer.querySelectorAll('[data-del-result-id]').forEach(btn => {
         btn.addEventListener('click', async (e) => {
-          const stdId = e.currentTarget.dataset.delScore;
-          const targetResult = (quiz.results || []).find(r => r.studentId === stdId);
-          const stdName = targetResult ? targetResult.studentName : stdId;
+          const resId = e.currentTarget.dataset.delResultId;
+          const stdName = e.currentTarget.dataset.studentName || 'นักเรียน';
 
           const confirmed = await showConfirmModal({
             title: '🗑️ ยืนยันการลบคะแนน',
-            message: `คุณแน่ใจหรือไม่ว่าต้องการลบคะแนนแบบทดสอบของ "${decodeMojibakeThai(stdName)}"? หลังจากลบแล้วนักเรียนจะสามารถเข้าทำแบบทดสอบชุดนี้ใหม่อีกครั้งได้`,
+            message: `คุณแน่ใจหรือไม่ว่าต้องการลบคะแนนสอบครั้งนี้ของ "${decodeMojibakeThai(stdName)}"? หลังจากลบแล้วนักเรียนจะสามารถเข้าทำแบบทดสอบใหม่อีกครั้งได้`,
             confirmText: 'ลบคะแนน',
             cancelText: 'ยกเลิก'
           });
 
           if (confirmed) {
-            const updatedResults = (quiz.results || []).filter(r => r.studentId !== stdId);
+            const allQuizzes = firebaseService.getCollection('quizzes');
+            const latestQuiz = allQuizzes.find(q => q.id === quiz.id) || quiz;
+            const currentResults = Array.isArray(latestQuiz.results) ? latestQuiz.results : [];
+
+            // Filter out ONLY the single matching result item
+            const updatedResults = currentResults.filter(r => {
+              const rKey = r.id || (r.studentId + '_' + (r.completedAt || ''));
+              return rKey !== resId;
+            });
+
             quiz.results = updatedResults;
             await firebaseService.updateItem('quizzes', quiz.id, { results: updatedResults });
             renderScoresTable();
@@ -995,9 +1003,17 @@ export class QuizModule {
         });
       });
 
-      const results = quiz.results || [];
+      const allQuizzes = firebaseService.getCollection('quizzes');
+      const latestQuiz = allQuizzes.find(q => q.id === quiz.id) || quiz;
+      const results = Array.isArray(latestQuiz.results) ? [...latestQuiz.results] : [];
+
+      const stdId = (currentUser.studentId && currentUser.studentId !== '-') 
+        ? currentUser.studentId 
+        : (currentUser.username || currentUser.id || ('STD_' + Date.now()));
+
       const newResult = {
-        studentId: currentUser.studentId || 'STD6701',
+        id: 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+        studentId: stdId,
         studentName: currentUser.name,
         score: score,
         maxScore: maxScore,
