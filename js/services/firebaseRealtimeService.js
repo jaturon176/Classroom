@@ -4,12 +4,12 @@
  * Database Location: Singapore (asia-southeast1)
  * Database URL: https://classroom-app-4bd14-default-rtdb.asia-southeast1.firebasedatabase.app
  * 
- * Architecture:
+ * Architecture & Deletion Persistence Fix:
  * 1. 🌐 Central Primary Server (Single Source of Truth):
- *    - All devices (PC, iPad, iPhone, Android) connect directly to Firebase Realtime Database Singapore Node.
- *    - Real-time websocket subscription (`onValue`) syncs any mutation (add/edit/delete) to all connected devices within 0.1s.
+ *    - All devices connect directly to Firebase Realtime Database Singapore Node.
+ *    - Sentinel Flag `_system_seeded` prevents deleted items from ever being re-seeded!
  * 2. 📱 LocalStorage (Offline Backup & Fast Startup Cache):
- *    - Pre-seeded fallback dataset ensuring instant 0ms app start.
+ *    - Holds active user data without restoring deleted items.
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -51,7 +51,7 @@ class FirebaseRealtimeService {
       this.isRealtimeConnected = true;
       console.log('🌐 Connected to Central Primary Server (Singapore asia-southeast1 Realtime DB)');
 
-      // 1. Seed Central Database if completely empty
+      // 1. Seed Central Database ONLY ONCE via sentinel node check
       await this.ensureCentralServerSeeded();
 
       // 2. Attach Live Subscriptions across all connected devices (0.1s sync)
@@ -60,18 +60,22 @@ class FirebaseRealtimeService {
         onValue(colRef, (snapshot) => {
           const val = snapshot.val();
           let itemsArray = [];
+          
           if (val) {
             if (Array.isArray(val)) {
-              itemsArray = val.filter(Boolean);
+              itemsArray = val.filter(item => item && typeof item === 'object' && !item._placeholder);
             } else if (typeof val === 'object') {
-              itemsArray = Object.keys(val).map(k => {
-                const item = val[k];
-                return typeof item === 'object' && item !== null ? { id: k, ...item } : item;
-              });
+              itemsArray = Object.keys(val)
+                .filter(k => k !== '_empty' && k !== '_placeholder')
+                .map(k => {
+                  const item = val[k];
+                  return typeof item === 'object' && item !== null ? { id: k, ...item } : item;
+                })
+                .filter(item => item && typeof item === 'object' && !item._placeholder);
             }
           }
 
-          // Always overwrite local cache with Central Primary Server Data (including empty array after deletes)
+          // Save exact server array state (even if empty `[]`)
           localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
           
           // Broadcast live update to refresh active UI across all connected devices
@@ -86,21 +90,28 @@ class FirebaseRealtimeService {
     }
   }
 
-  // Ensure Central Server has initial seed data if DB is totally fresh
+  // Ensure Central Server has initial seed data ONLY ONCE using master sentinel flag
   async ensureCentralServerSeeded() {
     if (!this.db) return;
     try {
-      const usersRef = ref(this.db, 'users');
-      const snapshot = await get(usersRef);
-      if (!snapshot.exists() || !snapshot.val()) {
-        console.log('🌱 Seeding central server with initial dataset...');
-        await set(ref(this.db, 'users'), this.arrayToMap(INITIAL_USERS));
-        await set(ref(this.db, 'courses'), this.arrayToMap(INITIAL_COURSES));
-        await set(ref(this.db, 'homework'), this.arrayToMap(INITIAL_HOMEWORK));
-        await set(ref(this.db, 'quizzes'), this.arrayToMap([SAMPLE_QUIZ]));
-        await set(ref(this.db, 'announcements'), this.arrayToMap(INITIAL_ANNOUNCEMENTS));
-        await set(ref(this.db, 'attendance'), this.arrayToMap(INITIAL_ATTENDANCE));
+      const sentinelRef = ref(this.db, '_system_seeded');
+      const snapshot = await get(sentinelRef);
+
+      // If system has ALREADY been seeded once, NEVER re-seed deleted items!
+      if (snapshot.exists() && snapshot.val() === true) {
+        return;
       }
+
+      console.log('🌱 First-Time System Initialization: Seeding central server with initial dataset...');
+      await set(ref(this.db, 'users'), this.arrayToMap(INITIAL_USERS));
+      await set(ref(this.db, 'courses'), this.arrayToMap(INITIAL_COURSES));
+      await set(ref(this.db, 'homework'), this.arrayToMap(INITIAL_HOMEWORK));
+      await set(ref(this.db, 'quizzes'), this.arrayToMap([SAMPLE_QUIZ]));
+      await set(ref(this.db, 'announcements'), this.arrayToMap(INITIAL_ANNOUNCEMENTS));
+      await set(ref(this.db, 'attendance'), this.arrayToMap(INITIAL_ATTENDANCE));
+      
+      // Set Sentinel Flag so system never re-seeds deleted items
+      await set(sentinelRef, true);
     } catch (e) {
       console.warn('Central seed check notice:', e);
     }
@@ -108,10 +119,12 @@ class FirebaseRealtimeService {
 
   arrayToMap(arr) {
     const map = {};
-    if (Array.isArray(arr)) {
+    if (Array.isArray(arr) && arr.length > 0) {
       arr.forEach(item => {
         if (item && item.id) map[item.id] = item;
       });
+    } else {
+      map['_placeholder'] = { id: '_placeholder', _placeholder: true };
     }
     return map;
   }
@@ -130,7 +143,7 @@ class FirebaseRealtimeService {
       }
     }
 
-    // Fallback to initial seed dataset only if key NEVER existed in localStorage
+    // Fallback to initial seed dataset ONLY if key NEVER existed in localStorage
     if (key === 'users') return INITIAL_USERS;
     if (key === 'courses') return INITIAL_COURSES;
     if (key === 'homework') return INITIAL_HOMEWORK;
@@ -194,20 +207,26 @@ class FirebaseRealtimeService {
     return null;
   }
 
-  // 🌐 Delete Item from Central Primary Server
+  // 🌐 Delete Item from Central Primary Server (With Permanent Node Deletion Fix)
   async deleteItem(collectionKey, id) {
     let items = this.getCollection(collectionKey);
     items = items.filter(x => x.id !== id);
     localStorage.setItem('ag_' + collectionKey, JSON.stringify(items));
 
-    // Broadcast local deletion immediately so UI updates in 0ms across device
+    // Broadcast local deletion immediately so UI updates in 0ms across devices
     window.dispatchEvent(new CustomEvent('ag_realtime_update', {
       detail: { collection: collectionKey, items: items }
     }));
 
     if (this.isRealtimeConnected && this.db) {
-      const itemRef = ref(this.db, `${collectionKey}/${id}`);
-      await remove(itemRef).catch(err => console.warn('Central server deleteItem error:', err));
+      if (items.length === 0) {
+        // If all items are deleted, write a placeholder flag so Firebase node remains valid without auto-reseeding
+        const colRef = ref(this.db, collectionKey);
+        await set(colRef, { _placeholder: { id: '_placeholder', _placeholder: true } }).catch(err => console.warn('Central server empty clear error:', err));
+      } else {
+        const itemRef = ref(this.db, `${collectionKey}/${id}`);
+        await remove(itemRef).catch(err => console.warn('Central server deleteItem error:', err));
+      }
     }
   }
 
