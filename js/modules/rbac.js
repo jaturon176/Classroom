@@ -32,9 +32,10 @@ export class RBACModule {
       const users = firebaseService.getCollection('users');
       if (users && users.length > 0) {
         const matched = users.find(u => 
-          (u.id && user.id && u.id === user.id) ||
+          (u.id && user.id && String(u.id) === String(user.id)) ||
           (u.username && user.username && u.username.toLowerCase() === user.username.toLowerCase()) ||
-          (u.studentId && user.studentId && u.studentId.toLowerCase() === user.studentId.toLowerCase())
+          (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
+          (u.studentId && user.studentId && u.studentId !== '-' && user.studentId !== '-' && u.studentId.toLowerCase() === user.studentId.toLowerCase())
         );
         if (matched) {
           const updatedUser = { ...user, ...matched };
@@ -107,14 +108,14 @@ export class RBACModule {
 
     let user = users.find(u => 
       (u.username && u.username.toLowerCase() === input) ||
-      (u.studentId && u.studentId.toLowerCase() === input) ||
+      (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
       (u.email && u.email.toLowerCase() === input)
     );
 
     if (!user) {
       user = INITIAL_USERS.find(u => 
         (u.username && u.username.toLowerCase() === input) ||
-        (u.studentId && u.studentId.toLowerCase() === input) ||
+        (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
         (u.email && u.email.toLowerCase() === input)
       );
     }
