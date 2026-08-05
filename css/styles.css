@@ -1,73 +1,88 @@
-@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Prompt:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Krub:ital,wght@0,400;0,600;0,700;1,400&display=swap');
 
 :root {
+  --font-body: 'Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', 'Krub', sans-serif;
+  --font-heading: 'Prompt', 'Sarabun', sans-serif;
   --bg-light: #f8fafc;
   --card-light: #ffffff;
   --border-light: rgba(226, 232, 240, 0.9);
   --text-primary: #0f172a;
-  --text-secondary: #475569;
+  --text-secondary: #334155;
+}
+
+html {
+  font-size: 16px;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  font-family: 'Sarabun', 'Prompt', sans-serif;
+  font-family: var(--font-body);
+  font-size: 1rem;
   background-color: #f8fafc;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.06) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.05) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.04) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
   background-attachment: fixed;
   color: #0f172a;
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  line-height: 1.6;
+  line-height: 1.65;
+  letter-spacing: 0.005em;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6, .font-heading {
-  font-family: 'Prompt', sans-serif;
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
   color: #0f172a;
 }
 
-/* Premium Light Clean Card */
+/* Official Clean Thai Card Styling */
 .glass-card {
   background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 4px 20px -2px rgba(31, 38, 135, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 4px 20px -2px rgba(31, 38, 135, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
 }
 
-/* Glass Navigation Bar - Redesigned Soft Pastel Sky Blue */
+/* Official Navigation Bar - Soft Pastel Sky Blue */
 .glass-nav {
-  background: rgba(240, 249, 255, 0.95);
+  background: rgba(240, 249, 255, 0.96);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid rgba(186, 230, 253, 0.85);
-  box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.06);
+  box-shadow: 0 4px 20px -2px rgba(14, 165, 233, 0.05);
 }
 
 /* Header Specific Button Styling */
 .nav-tab-active {
   background: linear-gradient(135deg, #0284c7, #4f46e5);
   color: #ffffff !important;
+  font-family: var(--font-heading);
   font-weight: 700 !important;
-  box-shadow: 0 4px 14px 0 rgba(2, 132, 199, 0.3);
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px 0 rgba(2, 132, 199, 0.28);
 }
 
 .nav-tab-inactive {
   color: #0369a1;
+  font-family: var(--font-heading);
   font-weight: 600;
 }
 
 .nav-tab-inactive:hover {
-  background: rgba(224, 242, 254, 0.8);
+  background: rgba(224, 242, 254, 0.85);
   color: #0c4a6e;
 }
 
-/* High Contrast & Clean Buttons */
+/* High Contrast Official Buttons */
 .btn-primary {
   background: linear-gradient(135deg, #0284c7, #4f46e5);
   color: #ffffff;
+  font-family: var(--font-heading);
   font-weight: 600;
   letter-spacing: 0.01em;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -75,13 +90,14 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.3);
 }
 
 .btn-secondary {
   background: #f0f9ff;
   border: 1px solid #bae6fd;
   color: #0369a1;
+  font-family: var(--font-heading);
   font-weight: 600;
   transition: all 0.2s ease-in-out;
 }
@@ -90,7 +106,7 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   background: #e0f2fe;
 }
 
-/* Clean Input Fields */
+/* Clean Form Input Fields */
 .input-field {
   width: 100%;
   padding: 0.7rem 1rem;
@@ -98,8 +114,9 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   background: #ffffff;
   border: 1px solid #cbd5e1;
   color: #0f172a;
-  font-family: inherit;
-  font-size: 0.875rem;
+  font-family: var(--font-body);
+  font-size: 0.9375rem;
+  line-height: 1.5;
   outline: none;
   transition: all 0.2s ease-in-out;
 }
@@ -109,21 +126,25 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
-/* Table Clean Styling */
+/* Official Table Typography & Clean Formatting */
 table {
   border-collapse: separate;
   border-spacing: 0;
+  font-family: var(--font-body);
 }
 
 th {
-  font-family: 'Prompt', sans-serif;
-  letter-spacing: 0.03em;
+  font-family: var(--font-heading);
+  letter-spacing: 0.02em;
   color: #334155;
   background-color: #f8fafc;
+  font-size: 0.8125rem;
+  font-weight: 700;
 }
 
 td {
   color: #0f172a;
+  font-size: 0.9375rem;
 }
 
 /* Animations */
