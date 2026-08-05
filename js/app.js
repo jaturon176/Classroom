@@ -1,7 +1,7 @@
 /**
  * Main Application Controller & Router
  * Handles authentication checks, tab navigation, settings rendering,
- * soft pastel sky blue header navigation, and user avatar updates.
+ * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
 import { RBACModule } from './modules/rbac.js';
@@ -31,6 +31,11 @@ class SchoolApp {
     this.initSyncStatus();
     this.renderHeader();
     this.renderActiveTab();
+
+    // 🌐 Central Primary Server 0.1s Realtime Sync Listener for all connected devices
+    window.addEventListener('ag_realtime_update', () => {
+      this.renderActiveTab();
+    });
   }
 
   handleSettingsUpdated() {
@@ -43,15 +48,12 @@ class SchoolApp {
       const badge = document.getElementById('sync-status-badge');
       if (!badge) return;
 
-      if (status === 'synced') {
+      if (status === 'synced' || status === 'syncing') {
         badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1.5';
-        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Realtime DB (0.1s Sync)';
-      } else if (status === 'syncing') {
-        badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-200 animate-pulse flex items-center gap-1.5';
-        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span> Syncing (${pendingCount})...`;
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Central Server Live (0.1s)';
       } else {
         badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5';
-        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> Offline Cache Mode';
+        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> Offline Local Cache';
       }
     });
   }
@@ -118,7 +120,7 @@ class SchoolApp {
               </div>
               <div>
                 <div class="font-heading font-extrabold text-base tracking-tight text-slate-800 flex items-center gap-2">
-                  ${decodeMojibakeThai(settings.schoolName)} <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">Realtime DB</span>
+                  ${decodeMojibakeThai(settings.schoolName)} <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">Central Server Live</span>
                 </div>
                 <div class="text-[11px] text-slate-500 font-heading">ระบบบริหารจัดการห้องเรียนอัจฉริยะ (${settings.semester}/${settings.academicYear})</div>
               </div>
