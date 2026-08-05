@@ -1016,71 +1016,39 @@ export class QuizModule {
     });
   }
 
-  // Render Detailed Quiz Results Summary
-  renderQuizResultSummary(containerEl, quiz, score, maxScore, breakdown) {
+  // Render Quiz Results Summary (Displays score summary without revealing answer key)
+  renderQuizResultSummary(containerEl, quiz, score, maxScore) {
     const percent = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0;
     const isPassed = percent >= 60;
 
     containerEl.innerHTML = `
-      <div class="space-y-8 animate-fade-in max-w-4xl mx-auto">
+      <div class="space-y-8 animate-fade-in max-w-2xl mx-auto py-8">
         <!-- Result Summary Card -->
-        <div class="glass-card p-8 rounded-3xl shadow-lg bg-white border border-slate-200 text-center space-y-4">
-          <div class="w-16 h-16 rounded-full ${isPassed ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'} mx-auto flex items-center justify-center text-3xl font-bold">
+        <div class="glass-card p-8 md:p-10 rounded-3xl shadow-xl bg-white border border-slate-200 text-center space-y-6">
+          <div class="w-20 h-20 rounded-full ${isPassed ? 'bg-emerald-100 text-emerald-600 border border-emerald-200' : 'bg-rose-100 text-rose-600 border border-rose-200'} mx-auto flex items-center justify-center text-4xl font-bold shadow-md">
             ${isPassed ? '🎉' : '⚠️'}
           </div>
 
-          <div class="space-y-1">
-            <span class="text-xs font-bold font-heading px-3 py-1 rounded-full ${isPassed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
-              ${isPassed ? 'ผ่านเกณฑ์ทดสอบ' : 'ควรทบทวนเนื้อหาเพิ่มเติม'}
+          <div class="space-y-2">
+            <span class="text-xs font-bold font-heading px-3.5 py-1.5 rounded-full ${isPassed ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+              ${isPassed ? '✅ ผ่านเกณฑ์การทดสอบ' : '⚠️ ควรทบทวนเนื้อหาเพิ่มเติม'}
             </span>
-            <h2 class="text-3xl font-extrabold font-heading text-slate-900 mt-2">${decodeMojibakeThai(quiz.title)}</h2>
+            <h2 class="text-2xl font-extrabold font-heading text-slate-900 mt-2">${decodeMojibakeThai(quiz.title)}</h2>
+            <p class="text-xs text-slate-500">บันทึกผลการทำแบบทดสอบของคุณเรียบร้อยแล้ว</p>
           </div>
 
-          <div class="py-4">
+          <div class="py-6 px-4 bg-slate-50 rounded-2xl border border-slate-200/80">
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">คะแนนที่คุณทำได้</div>
             <div class="text-5xl font-extrabold font-heading ${isPassed ? 'text-emerald-600' : 'text-rose-600'}">
               ${score} / ${maxScore} <span class="text-lg font-normal text-slate-500">คะแนน (${percent}%)</span>
             </div>
           </div>
 
-          <button id="btn-back-to-quizzes" class="btn-primary text-xs px-6 py-2.5 rounded-xl font-heading font-bold shadow-md">
-            🔙 กลับสู่รายการแบบทดสอบ
-          </button>
-        </div>
-
-        <!-- Detailed Breakdown -->
-        <div class="space-y-4">
-          <h3 class="text-lg font-bold font-heading text-slate-900">🔍 ตรวจคำตอบละเอียด</h3>
-
-          ${breakdown.map((item, idx) => `
-            <div class="glass-card p-6 rounded-3xl shadow-sm bg-white border ${item.isCorrect ? 'border-emerald-200' : 'border-rose-200'} space-y-3">
-              <div class="flex justify-between items-start gap-3">
-                <h4 class="font-bold font-heading text-slate-900 text-sm">
-                  ข้อที่ ${idx + 1}: ${decodeMojibakeThai(item.questionText)} (${item.points} คะแนน)
-                </h4>
-                <span class="text-xs font-bold px-2.5 py-1 rounded-full ${item.isCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}">
-                  ${item.isCorrect ? `✅ ถูกต้อง (+${item.points})` : '❌ ผิด (0)'}
-                </span>
-              </div>
-
-              ${item.image ? `<div class="max-w-xs rounded-xl overflow-hidden border border-slate-200"><img src="${item.image}" class="w-full h-auto"></div>` : ''}
-
-              <div class="space-y-1.5 text-xs">
-                ${(item.options || []).map((opt, oIdx) => {
-                  let optStyle = 'bg-slate-50 text-slate-700 border-slate-200';
-                  if (oIdx === item.correctAnswer) optStyle = 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold';
-                  else if (oIdx === item.selectedVal && !item.isCorrect) optStyle = 'bg-rose-50 text-rose-800 border-rose-300 font-bold';
-
-                  return `
-                    <div class="p-2.5 rounded-xl border ${optStyle} flex justify-between items-center">
-                      <span>${decodeMojibakeThai(opt)}</span>
-                      ${oIdx === item.correctAnswer ? '<span class="text-[11px] font-bold text-emerald-600">คำตอบที่ถูกต้อง ✅</span>' : ''}
-                      ${oIdx === item.selectedVal && !item.isCorrect ? '<span class="text-[11px] font-bold text-rose-600">คำตอบที่คุณเลือก ❌</span>' : ''}
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          `).join('')}
+          <div class="pt-2">
+            <button id="btn-back-to-quizzes" class="btn-primary text-sm px-8 py-3 rounded-2xl font-heading font-bold shadow-lg shadow-indigo-500/20">
+              🔙 กลับสู่หน้าแบบทดสอบ
+            </button>
+          </div>
         </div>
       </div>
     `;

@@ -120,7 +120,7 @@ class SchoolApp {
       { id: 'attendance', label: '⏱️ เช็กชื่อรายคาบ', roles: ['Admin', 'Teacher'] },
       { id: 'gradebook', label: '📊 คะแนน/รายงาน', roles: ['Admin', 'Teacher', 'Student'] },
       { id: 'users', label: '👑 จัดการผู้ใช้ (RBAC)', roles: ['Admin'] },
-      { id: 'settings', label: '⚙️ ตั้งค่าระบบ', roles: ['Admin', 'Teacher', 'Student'] },
+      { id: 'settings', label: '⚙️ ตั้งค่าระบบ', roles: ['Admin', 'Teacher'] },
     ];
 
     const visibleTabs = allTabs.filter(t => t.roles.includes(currentUser.role));
