@@ -21,23 +21,46 @@ export class RBACModule {
   }
 
   loadSavedUser() {
-    const raw = localStorage.getItem('antigravity_current_user');
+    let raw = localStorage.getItem('antigravity_current_user');
+    if (!raw) {
+      raw = sessionStorage.getItem('antigravity_current_user');
+    }
     if (!raw) return null;
     try {
-      return JSON.parse(raw);
+      const user = JSON.parse(raw);
+      // Double check user still exists or refresh profile from users collection if updated
+      const users = firebaseService.getCollection('users');
+      if (users && users.length > 0) {
+        const matched = users.find(u => 
+          (u.id && user.id && u.id === user.id) ||
+          (u.username && user.username && u.username.toLowerCase() === user.username.toLowerCase()) ||
+          (u.studentId && user.studentId && u.studentId.toLowerCase() === user.studentId.toLowerCase())
+        );
+        if (matched) {
+          const updatedUser = { ...user, ...matched };
+          const json = JSON.stringify(updatedUser);
+          localStorage.setItem('antigravity_current_user', json);
+          sessionStorage.setItem('antigravity_current_user', json);
+          return updatedUser;
+        }
+      }
+      return user;
     } catch (e) {
       return null;
     }
   }
 
-  saveUser(user) {
+  saveUser(user, triggerAuthChange = true) {
     this.currentUser = user;
     if (user) {
-      localStorage.setItem('antigravity_current_user', JSON.stringify(user));
+      const json = JSON.stringify(user);
+      localStorage.setItem('antigravity_current_user', json);
+      sessionStorage.setItem('antigravity_current_user', json);
     } else {
       localStorage.removeItem('antigravity_current_user');
+      sessionStorage.removeItem('antigravity_current_user');
     }
-    if (this.onAuthChange) this.onAuthChange(user);
+    if (triggerAuthChange && this.onAuthChange) this.onAuthChange(user);
   }
 
   isAuthenticated() {

@@ -34,10 +34,24 @@ class SchoolApp {
 
     // 🌐 Central Primary Server 0.1s Realtime Sync Listener for all connected devices
     window.addEventListener('ag_realtime_update', () => {
-      // Prevent resetting active quiz session if student is in the middle of taking a test!
-      if (this.activeTab === 'quiz' && this.quizModule && this.quizModule.isSessionActive) {
+      // 🛡️ UNIVERSAL UI & SESSION PROTECTION SHIELD
+      // Prevent kicking user out or resetting active screens during live updates:
+      
+      // 1. Check if user is currently taking an active quiz
+      const isQuizActive = this.activeTab === 'quiz' && this.quizModule && this.quizModule.isSessionActive;
+
+      // 2. Check if any modal or pop-up window is open on screen
+      const hasOpenModal = !!document.querySelector('.fixed.inset-0, [id*="modal"], [id*="dialog"]');
+
+      // 3. Check if user is actively typing in any input, textarea, or select field
+      const activeEl = document.activeElement;
+      const isTyping = activeEl && (['INPUT', 'TEXTAREA', 'SELECT'].includes(activeEl.tagName) || activeEl.isContentEditable);
+
+      if (isQuizActive || hasOpenModal || isTyping) {
+        // Silently keep background data updated without wiping UI or kicking user out!
         return;
       }
+
       this.renderActiveTab();
     });
   }
