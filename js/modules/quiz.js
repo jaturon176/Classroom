@@ -487,18 +487,7 @@ export class QuizModule {
           });
 
           if (confirmed) {
-            const allQuizzes = firebaseService.getCollection('quizzes');
-            const latestQuiz = allQuizzes.find(q => q.id === quiz.id) || quiz;
-            const currentResults = Array.isArray(latestQuiz.results) ? latestQuiz.results : [];
-
-            // Filter out ONLY the single matching result item
-            const updatedResults = currentResults.filter(r => {
-              const rKey = r.id || (r.studentId + '_' + (r.completedAt || ''));
-              return rKey !== resId;
-            });
-
-            quiz.results = updatedResults;
-            await firebaseService.updateItem('quizzes', quiz.id, { results: updatedResults });
+            await firebaseService.deleteQuizResult(quiz.id, resId);
             renderScoresTable();
             refreshCb();
           }
@@ -1003,10 +992,6 @@ export class QuizModule {
         });
       });
 
-      const allQuizzes = firebaseService.getCollection('quizzes');
-      const latestQuiz = allQuizzes.find(q => q.id === quiz.id) || quiz;
-      const results = Array.isArray(latestQuiz.results) ? [...latestQuiz.results] : [];
-
       const stdId = (currentUser.studentId && currentUser.studentId !== '-') 
         ? currentUser.studentId 
         : (currentUser.username || currentUser.id || ('STD_' + Date.now()));
@@ -1020,8 +1005,7 @@ export class QuizModule {
         completedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
       };
 
-      results.push(newResult);
-      firebaseService.updateItem('quizzes', quiz.id, { results });
+      firebaseService.addQuizResult(quiz.id, newResult);
 
       this.renderQuizResultSummary(containerEl, quiz, score, maxScore, breakdown);
     };

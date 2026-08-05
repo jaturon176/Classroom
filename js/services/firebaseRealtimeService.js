@@ -10,6 +10,8 @@
  *    - Sentinel Flag `_system_seeded` prevents deleted items from ever being re-seeded!
  * 2. 📱 LocalStorage (Offline Backup & Fast Startup Cache):
  *    - Holds active user data without restoring deleted items.
+ * 3. 🎯 Atomic Quiz Submission Engine:
+ *    - Quiz results are written to atomic child keys (`quizzes/qz_xxx/results/res_yyy`) so multi-student submissions NEVER overwrite each other!
  */
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
@@ -28,19 +30,35 @@ class FirebaseRealtimeService {
     this.db = null;
     this.isRealtimeConnected = false;
     this.collections = ['users', 'courses', 'homework', 'quizzes', 'announcements', 'attendance'];
-    
-    // Always initialize local store cache first so fresh devices can log in instantly
-    this.initLocalStoreFallback();
+
+    // Seed local cache defaults if empty
+    this.initLocalDefaults();
+
+    // Initialize Firebase Connection
     this.initFirebaseRealtime();
   }
 
-  initLocalStoreFallback() {
+  initLocalDefaults() {
     if (localStorage.getItem('ag_users') === null) localStorage.setItem('ag_users', JSON.stringify(INITIAL_USERS));
     if (localStorage.getItem('ag_courses') === null) localStorage.setItem('ag_courses', JSON.stringify(INITIAL_COURSES));
     if (localStorage.getItem('ag_homework') === null) localStorage.setItem('ag_homework', JSON.stringify(INITIAL_HOMEWORK));
     if (localStorage.getItem('ag_quizzes') === null) localStorage.setItem('ag_quizzes', JSON.stringify([SAMPLE_QUIZ]));
     if (localStorage.getItem('ag_announcements') === null) localStorage.setItem('ag_announcements', JSON.stringify(INITIAL_ANNOUNCEMENTS));
     if (localStorage.getItem('ag_attendance') === null) localStorage.setItem('ag_attendance', JSON.stringify(INITIAL_ATTENDANCE));
+  }
+
+  normalizeItem(item) {
+    if (!item) return item;
+    // Normalize quiz results map -> array if stored as child keys in Firebase Realtime DB
+    if (item.results && typeof item.results === 'object' && !Array.isArray(item.results)) {
+      item.results = Object.keys(item.results)
+        .filter(rk => rk !== '_placeholder' && rk !== '_empty')
+        .map(rk => {
+          const resObj = item.results[rk];
+          return typeof resObj === 'object' && resObj !== null ? { id: rk, ...resObj } : resObj;
+        });
+    }
+    return item;
   }
 
   // 🌐 Initialize Central Firebase Realtime Database & Setup 0.1s Cross-Device Sync
@@ -63,13 +81,16 @@ class FirebaseRealtimeService {
           
           if (val) {
             if (Array.isArray(val)) {
-              itemsArray = val.filter(item => item && typeof item === 'object' && !item._placeholder);
+              itemsArray = val
+                .filter(item => item && typeof item === 'object' && !item._placeholder)
+                .map(item => this.normalizeItem(item));
             } else if (typeof val === 'object') {
               itemsArray = Object.keys(val)
                 .filter(k => k !== '_empty' && k !== '_placeholder')
                 .map(k => {
                   const item = val[k];
-                  return typeof item === 'object' && item !== null ? { id: k, ...item } : item;
+                  const cleanItem = typeof item === 'object' && item !== null ? { id: k, ...item } : item;
+                  return this.normalizeItem(cleanItem);
                 })
                 .filter(item => item && typeof item === 'object' && !item._placeholder);
             }
@@ -136,7 +157,7 @@ class FirebaseRealtimeService {
       try {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
-          return autoFixObjectMojibake(parsed);
+          return autoFixObjectMojibake(parsed.map(item => this.normalizeItem(item)));
         }
       } catch (e) {
         // Fallback
@@ -219,24 +240,87 @@ class FirebaseRealtimeService {
     }));
 
     if (this.isRealtimeConnected && this.db) {
+      const itemRef = ref(this.db, `${collectionKey}/${id}`);
       if (items.length === 0) {
-        // If all items are deleted, write a placeholder flag so Firebase node remains valid without auto-reseeding
-        const colRef = ref(this.db, collectionKey);
-        await set(colRef, { _placeholder: { id: '_placeholder', _placeholder: true } }).catch(err => console.warn('Central server empty clear error:', err));
-      } else {
-        const itemRef = ref(this.db, `${collectionKey}/${id}`);
-        await remove(itemRef).catch(err => console.warn('Central server deleteItem error:', err));
+        // Leave placeholder node so Firebase doesn't auto-delete the parent key
+        await set(ref(this.db, `${collectionKey}/_placeholder`), { id: '_placeholder', _placeholder: true });
       }
+      await remove(itemRef).catch(err => console.warn('Central server deleteItem error:', err));
+    }
+    return true;
+  }
+
+  // 🎯 ATOMIC QUIZ RESULT SUBMISSION (Prevents overwriting scores when multiple students submit together)
+  async addQuizResult(quizId, newResult) {
+    const cleanResult = this.sanitizeForFirebase(newResult);
+
+    // 1. Update local cache immediately
+    const items = this.getCollection('quizzes');
+    const quiz = items.find(q => q.id === quizId);
+    if (quiz) {
+      if (!Array.isArray(quiz.results)) quiz.results = [];
+      // Remove duplicate if re-submitting same attempt ID
+      quiz.results = quiz.results.filter(r => r.id !== newResult.id);
+      quiz.results.push(cleanResult);
+      localStorage.setItem('ag_quizzes', JSON.stringify(items));
+
+      window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+        detail: { collection: 'quizzes', items: items }
+      }));
+    }
+
+    // 2. Write ATOMICALLY to specific child key in Firebase DB (Never overwrites other students!)
+    if (this.isRealtimeConnected && this.db) {
+      const resRef = ref(this.db, `quizzes/${quizId}/results/${newResult.id}`);
+      await set(resRef, cleanResult).catch(err => console.warn('Realtime addQuizResult error:', err));
     }
   }
 
-  // Bulk Student Import
-  async importStudents(studentsList) {
+  // 🎯 ATOMIC QUIZ RESULT DELETION (Deletes ONLY single attempt by ID)
+  async deleteQuizResult(quizId, resultId) {
+    // 1. Update local cache immediately
+    const items = this.getCollection('quizzes');
+    const quiz = items.find(q => q.id === quizId);
+    if (quiz && Array.isArray(quiz.results)) {
+      quiz.results = quiz.results.filter(r => (r.id ? r.id !== resultId : (r.studentId + '_' + (r.completedAt || '')) !== resultId));
+      localStorage.setItem('ag_quizzes', JSON.stringify(items));
+
+      window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+        detail: { collection: 'quizzes', items: items }
+      }));
+    }
+
+    // 2. Remove ATOMICALLY from specific child key in Firebase DB
+    if (this.isRealtimeConnected && this.db) {
+      const resRef = ref(this.db, `quizzes/${quizId}/results/${resultId}`);
+      await remove(resRef).catch(err => console.warn('Realtime deleteQuizResult error:', err));
+    }
+  }
+
+  // Helper method to sanitize object before sending to Firebase
+  sanitizeForFirebase(obj) {
+    if (obj === undefined) return '';
+    if (obj === null) return '';
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sanitizeForFirebase(item));
+    }
+    if (typeof obj === 'object') {
+      const clean = {};
+      for (const k in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, k)) {
+          clean[k] = this.sanitizeForFirebase(obj[k]);
+        }
+      }
+      return clean;
+    }
+    return obj;
+  }
+
+  // Batch Import / Add Students
+  async batchAddStudents(studentsList) {
     const current = this.getCollection('users');
-    const fixedList = autoFixObjectMojibake(studentsList);
-    
-    fixedList.forEach(st => {
-      const existingIdx = current.findIndex(u => u.studentId === st.studentId || u.email === st.email);
+    studentsList.forEach(st => {
+      const existingIdx = current.findIndex(u => (u.studentId && u.studentId === st.studentId) || (u.username && u.username === st.username));
       if (existingIdx !== -1) {
         current[existingIdx] = { ...current[existingIdx], ...st };
       } else {
