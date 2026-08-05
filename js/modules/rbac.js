@@ -1,13 +1,14 @@
 /**
  * Role-Based Access Control (RBAC) Module
- * Handles Authentication, User Management (with 10-item Pagination), Permission Guards, Login UI (with Show/Hide Password Toggle),
+ * Handles Authentication, User Management (with 10-item Pagination), Permission Guards,
+ * World-Class Elegant Login UI (with Show/Hide Password Toggle),
  * Personal Password Change Modal, and Profile Picture Avatar Management for ALL users.
  */
 
-import { firebaseService } from '../services/firebaseService.js';
-import { INITIAL_USERS } from '../services/sampleDataService.js';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
+import { firebaseService } from '../services/firebaseService.js?v=3.1';
+import { INITIAL_USERS } from '../services/sampleDataService.js?v=3.1';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=3.1';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=3.1';
 
 export const AVATAR_PRESETS = ['🎓', '👨‍🎓', '👩‍🎓', '👨‍🏫', '👩‍🏫', '👑', '⚡', '🚀', '🦊', '🦁', '🦉', '🎨'];
 
@@ -320,56 +321,88 @@ export class RBACModule {
     });
   }
 
-  // Render Login Portal View (With Show/Hide Password Toggle Button 👁️/🙈)
+  // Render Login Portal View (Ultra-modern, Elegant World-Class Design)
   renderLoginScreen(containerEl) {
     containerEl.innerHTML = `
-      <div class="min-h-[70vh] flex items-center justify-center p-4 animate-fade-in">
-        <div class="glass-card w-full max-w-md p-8 rounded-3xl shadow-xl bg-white border border-slate-200 space-y-6">
-          <div class="text-center space-y-2">
-            <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 mx-auto flex items-center justify-center text-white text-2xl font-extrabold shadow-lg shadow-sky-500/25">
-              ⚡
-            </div>
-            <h2 class="text-2xl font-bold font-heading text-slate-900 tracking-tight">เข้าสู่ระบบ Cloud Classroom</h2>
-            <p class="text-xs text-slate-500">ระบบบริหารจัดการห้องเรียนยุคใหม่ (Realtime DB & RBAC)</p>
-          </div>
+      <div class="min-h-[75vh] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
+        <div class="relative w-full max-w-md">
+          <!-- Soft Ambient Glow Effects -->
+          <div class="absolute -top-10 -left-10 w-48 h-48 bg-indigo-400/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-purple-400/20 rounded-full blur-3xl pointer-events-none"></div>
 
-          <div class="p-4 bg-sky-50/70 rounded-2xl border border-sky-200/80 space-y-2.5">
-            <div class="text-[11px] font-bold font-heading text-sky-800 uppercase tracking-wider text-center">⚡ ทดลองเข้าสู่ระบบทันที (1-CLICK DEMO LOGIN)</div>
-            <div class="grid grid-cols-3 gap-2">
-              <button id="quick-admin" class="py-2 px-1 rounded-xl text-xs font-bold font-heading bg-purple-100 hover:bg-purple-200 text-purple-700 transition-colors">
-                👑 Admin
-              </button>
-              <button id="quick-teacher" class="py-2 px-1 rounded-xl text-xs font-bold font-heading bg-sky-100 hover:bg-sky-200 text-sky-700 transition-colors">
-                👨‍🏫 ครู
-              </button>
-              <button id="quick-student" class="py-2 px-1 rounded-xl text-xs font-bold font-heading bg-emerald-100 hover:bg-emerald-200 text-emerald-700 transition-colors">
-                🎓 นักเรียน
-              </button>
-            </div>
-          </div>
-
-          <form id="login-form" class="space-y-4">
-            <div>
-              <label class="block text-xs font-bold font-heading text-slate-700 mb-1">ชื่อผู้ใช้ / รหัสนักเรียน / อีเมล</label>
-              <input type="text" id="login-input" required class="input-field" placeholder="เช่น admin, prasert, หรือ STD6701">
-            </div>
-
-            <div>
-              <label class="block text-xs font-bold font-heading text-slate-700 mb-1">รหัสผ่าน (นักเรียนรหัสผ่านเริ่มต้นคือ รหัสนักเรียน)</label>
-              <div class="relative">
-                <input type="password" id="login-pass" required class="input-field pr-11" placeholder="••••••••">
-                <button type="button" id="btn-toggle-login-pass" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-base font-semibold p-1 transition-colors flex items-center justify-center" title="แสดง/ซ่อนรหัสผ่าน">
-                  👁️
-                </button>
+          <!-- Main Login Card -->
+          <div class="glass-card relative w-full p-8 md:p-10 rounded-3xl shadow-xl bg-white/95 border border-slate-200/80 space-y-7 backdrop-blur-xl">
+            <!-- Header Branding -->
+            <div class="text-center space-y-3">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 mx-auto flex items-center justify-center text-white text-3xl font-extrabold shadow-lg shadow-indigo-500/25 transition-transform hover:scale-105">
+                ⚡
+              </div>
+              <div class="space-y-1">
+                <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">เข้าสู่ระบบ</h2>
+                <p class="text-xs text-slate-500 font-heading">Krunoii-Classroom Platform (Smart Learning System)</p>
               </div>
             </div>
 
-            <div id="login-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium text-center"></div>
+            <!-- Login Form -->
+            <form id="login-form" class="space-y-5">
+              <div>
+                <label class="block text-xs font-bold font-heading text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <span>👤</span> ชื่อผู้ใช้ / รหัสนักเรียน / อีเมล
+                </label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="login-input" 
+                    required 
+                    class="input-field py-3 px-4 text-xs sm:text-sm bg-slate-50/70 border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all rounded-2xl" 
+                    placeholder="กรอกชื่อผู้ใช้ หรือ รหัสนักเรียน..."
+                  >
+                </div>
+              </div>
 
-            <button type="submit" class="w-full btn-primary py-3 rounded-xl font-bold font-heading text-sm shadow-md shadow-sky-500/20">
-              🔑 เข้าสู่ระบบ
-            </button>
-          </form>
+              <div>
+                <label class="block text-xs font-bold font-heading text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <span>🔒</span> รหัสผ่าน
+                </label>
+                <div class="relative">
+                  <input 
+                    type="password" 
+                    id="login-pass" 
+                    required 
+                    class="input-field py-3 pl-4 pr-12 text-xs sm:text-sm bg-slate-50/70 border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all rounded-2xl" 
+                    placeholder="••••••••"
+                  >
+                  <button 
+                    type="button" 
+                    id="btn-toggle-login-pass" 
+                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-lg p-1 transition-colors flex items-center justify-center" 
+                    title="แสดง/ซ่อนรหัสผ่าน"
+                  >
+                    👁️
+                  </button>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1 font-heading">
+                  <span>💡</span> นักเรียนใช้รหัสนักเรียนเป็นชื่อผู้ใช้และรหัสผ่านเริ่มต้น
+                </p>
+              </div>
+
+              <div id="login-error" class="hidden p-3.5 bg-rose-50 border border-rose-200/80 rounded-2xl text-xs text-rose-600 font-medium text-center shadow-sm"></div>
+
+              <button 
+                type="submit" 
+                class="w-full btn-primary py-3.5 rounded-2xl font-bold font-heading text-sm sm:text-base shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-2"
+              >
+                <span>🔑</span> เข้าสู่ระบบ (Sign In)
+              </button>
+            </form>
+
+            <!-- Bottom Security Footer -->
+            <div class="pt-4 border-t border-slate-100 text-center">
+              <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-200/60">
+                <span>🛡️</span> 256-Bit Encrypted Realtime Cloud Access
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     `;
@@ -384,10 +417,6 @@ export class RBACModule {
       toggleBtn.innerHTML = isPassword ? '🙈' : '👁️';
       toggleBtn.title = isPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน';
     });
-
-    containerEl.querySelector('#quick-admin')?.addEventListener('click', () => this.quickLogin('Admin'));
-    containerEl.querySelector('#quick-teacher')?.addEventListener('click', () => this.quickLogin('Teacher'));
-    containerEl.querySelector('#quick-student')?.addEventListener('click', () => this.quickLogin('Student'));
 
     containerEl.querySelector('#login-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
