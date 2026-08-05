@@ -81,6 +81,18 @@ export class QuizModule {
       });
     }
 
+    // Filter quizzes by teacher ownership for Teacher role (Teachers see ONLY their own created/taught quizzes)
+    if (currentUser.role === 'Teacher') {
+      quizzes = quizzes.filter(q => {
+        const targetCourse = courses.find(c => c.id === q.courseId);
+        const isMyCourse = targetCourse && decodeMojibakeThai(targetCourse.teacher) === decodeMojibakeThai(currentUser.name);
+        const isMyCreation = (q.creatorId && q.creatorId === currentUser.id) || 
+                             (q.creatorName && decodeMojibakeThai(q.creatorName) === decodeMojibakeThai(currentUser.name));
+
+        return isMyCourse || isMyCreation;
+      });
+    }
+
     // Calculate Quiz Statistics
     const totalQuizzes = quizzes.length;
     let totalAttempts = 0;
@@ -913,6 +925,7 @@ export class QuizModule {
 
         const targetGrade = document.getElementById('qz-target-grade')?.value || 'All';
 
+        const currentUser = this.rbac.getCurrentUser();
         const rawPayload = {
           title: titleVal,
           courseId: courseId,
@@ -921,6 +934,8 @@ export class QuizModule {
           optionCount: optionCount,
           targetGrade: targetGrade,
           targetRooms: selectedRooms,
+          creatorId: isEdit ? (quiz.creatorId || currentUser.id) : currentUser.id,
+          creatorName: isEdit ? (quiz.creatorName || currentUser.name) : currentUser.name,
           isOpen: isEdit ? (quiz.isOpen !== false) : true,
           questions: updatedQuestions,
           results: (isEdit && quiz && Array.isArray(quiz.results)) ? quiz.results : []
