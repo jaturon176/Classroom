@@ -345,22 +345,22 @@ export class RBACModule {
     });
   }
 
-  // Render Login Portal View (Ultra-modern, Elegant World-Class Design with Dynamic School Logo)
+  // Render Login Portal View (Ultra-modern, Elegant World-Class Design with Dynamic Permanent School Logo)
   renderLoginScreen(containerEl) {
-    let logoContent = '⚡';
+    let logoContent = './logo school.jpg';
     try {
       const rawSettings = localStorage.getItem('antigravity_school_settings');
       if (rawSettings) {
         const parsed = JSON.parse(rawSettings);
-        if (parsed.schoolLogo) {
+        if (parsed.schoolLogo && parsed.schoolLogo !== '⚡') {
           logoContent = parsed.schoolLogo;
         }
       }
     } catch (e) {
-      logoContent = '⚡';
+      logoContent = './logo school.jpg';
     }
 
-    const logoHtml = logoContent.startsWith('http') || logoContent.startsWith('data:image')
+    const logoHtml = logoContent.startsWith('http') || logoContent.startsWith('data:image') || logoContent.includes('logo') || logoContent.includes('.')
       ? `<img src="${logoContent}" class="w-full h-full object-cover">`
       : `<span>${logoContent}</span>`;
 

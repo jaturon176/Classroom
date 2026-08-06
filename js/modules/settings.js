@@ -32,7 +32,7 @@ export class SettingsModule {
     const raw = localStorage.getItem('antigravity_school_settings');
     const defaultSettings = {
       schoolName: 'โรงเรียนพนมดงรักวิทยา',
-      schoolLogo: '⚡',
+      schoolLogo: './logo school.jpg',
       academicYear: '2026',
       semester: 'ภาคเรียนที่ 1',
       theme: 'ocean',
@@ -48,10 +48,14 @@ export class SettingsModule {
       this.saveSettings();
     } else {
       try {
+        const parsed = JSON.parse(raw);
         this.settings = {
           ...defaultSettings,
-          ...JSON.parse(raw)
+          ...parsed
         };
+        if (!this.settings.schoolLogo || this.settings.schoolLogo === '⚡') {
+          this.settings.schoolLogo = './logo school.jpg';
+        }
       } catch (e) {
         this.settings = defaultSettings;
       }

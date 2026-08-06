@@ -4,16 +4,16 @@
  * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
-import { RBACModule } from './modules/rbac.js?v=5.4';
-import { DashboardModule } from './modules/dashboard.js?v=5.4';
-import { StudentsModule } from './modules/students.js?v=5.4';
-import { HomeworkModule } from './modules/homework.js?v=5.4';
-import { QuizModule } from './modules/quiz.js?v=5.4';
-import { AttendanceModule } from './modules/attendance.js?v=5.4';
-import { GradebookModule } from './modules/gradebook.js?v=5.4';
-import { SettingsModule } from './modules/settings.js?v=5.4';
-import { syncEngine } from './services/syncEngine.js?v=5.4';
-import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=5.4';
+import { RBACModule } from './modules/rbac.js?v=5.5';
+import { DashboardModule } from './modules/dashboard.js?v=5.5';
+import { StudentsModule } from './modules/students.js?v=5.5';
+import { HomeworkModule } from './modules/homework.js?v=5.5';
+import { QuizModule } from './modules/quiz.js?v=5.5';
+import { AttendanceModule } from './modules/attendance.js?v=5.5';
+import { GradebookModule } from './modules/gradebook.js?v=5.5';
+import { SettingsModule } from './modules/settings.js?v=5.5';
+import { syncEngine } from './services/syncEngine.js?v=5.5';
+import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=5.5';
 
 class SchoolApp {
   constructor() {
@@ -105,10 +105,11 @@ class SchoolApp {
     const currentUser = this.rbac.getCurrentUser();
     const settings = this.settingsModule.getSettings();
 
-    // Dynamic School Logo
-    const logoContent = settings.schoolLogo && (settings.schoolLogo.startsWith('http') || settings.schoolLogo.startsWith('data:image'))
-      ? `<img src="${settings.schoolLogo}" class="w-full h-full object-cover">`
-      : `<span>${settings.schoolLogo || '⚡'}</span>`;
+    // Dynamic Permanent School Logo (Default = ./logo school.jpg)
+    const schoolLogoPath = (settings.schoolLogo && settings.schoolLogo !== '⚡') ? settings.schoolLogo : './logo school.jpg';
+    const logoContent = schoolLogoPath.startsWith('http') || schoolLogoPath.startsWith('data:image') || schoolLogoPath.includes('logo') || schoolLogoPath.includes('.')
+      ? `<img src="${schoolLogoPath}" class="w-full h-full object-cover">`
+      : `<span>${schoolLogoPath}</span>`;
 
     // Default avatar icon per role if not customized
     const defaultAvatar = currentUser.role === 'Admin' ? '👑' : currentUser.role === 'Teacher' ? '👨‍🏫' : '🎓';
