@@ -159,8 +159,11 @@ export class HomeworkModule {
               ${currentUser.role === 'Student' ? 'ไม่มีการบ้านที่มอบหมายสำหรับห้องเรียนของคุณในขณะนี้' : 'ไม่พบรายการการบ้านในวิชานี้'}
             </div>
           ` : visibleHomework.map(hw => {
-            const mySubmission = hw.submissions ? hw.submissions.find(s => s.studentId === currentUser.studentId) : null;
-            const submissionCount = hw.submissions ? hw.submissions.length : 0;
+            const rawSubs = hw.submissions || [];
+            const submissionsList = Array.isArray(rawSubs) ? rawSubs : Object.values(rawSubs);
+            const validSubmissions = submissionsList.filter(s => s && typeof s === 'object');
+            const mySubmission = validSubmissions.find(s => s.studentId === currentUser.studentId);
+            const submissionCount = validSubmissions.length;
             
             const targetGradeStr = hw.targetGrade && hw.targetGrade !== 'All' ? hw.targetGrade : 'ทุกชั้น';
             const hwRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
@@ -1114,7 +1117,10 @@ export class HomeworkModule {
   // Student Homework Submission Modal
   showSubmissionModal(hw, refreshCb) {
     const currentUser = this.rbac.getCurrentUser();
-    const existing = hw.submissions ? hw.submissions.find(s => s.studentId === currentUser.studentId) : null;
+    const rawSubs = hw.submissions || [];
+    const submissionsList = Array.isArray(rawSubs) ? rawSubs : Object.values(rawSubs);
+    const validSubs = submissionsList.filter(s => s && typeof s === 'object');
+    const existing = validSubs.find(s => s.studentId === currentUser.studentId);
     let uploadedImageUrl = existing ? (existing.imageFile || '') : '';
 
     const attachmentsImages = Array.isArray(hw.images) ? hw.images : (hw.imageUrl ? [hw.imageUrl] : []);
@@ -1367,8 +1373,16 @@ export class HomeworkModule {
   }
 
   // Teacher Grading Modal
-  showGradingModal(hw, refreshCb) {
-    const submissions = hw.submissions || [];
+  showGradingModal(targetHw, refreshCb) {
+    const allHw = firebaseService.getCollection('homework');
+    const hw = allHw.find(h => h.id === targetHw.id) || targetHw;
+    
+    const rawSubs = hw.submissions || [];
+    let submissions = Array.isArray(rawSubs) ? [...rawSubs] : Object.values(rawSubs);
+    submissions = submissions.filter(s => s && typeof s === 'object');
+
+    const gradedCount = submissions.filter(s => s.status === 'Graded').length;
+    const pendingCount = submissions.length - gradedCount;
 
     const modalHTML = `
       <div id="grade-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -1383,14 +1397,26 @@ export class HomeworkModule {
             <button id="close-grade-modal" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
           </div>
 
+          <!-- Submission Summary Bar -->
+          <div class="mt-4 p-3.5 bg-indigo-50/80 border border-indigo-100 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs font-heading">
+            <span class="font-bold text-indigo-900 flex items-center gap-1.5">
+              <span>📊 จำนวนงานที่นักเรียนส่งมาทั้งหมด:</span>
+              <strong class="text-indigo-600 text-sm font-extrabold">${submissions.length} คน</strong>
+            </span>
+            <div class="flex items-center gap-2">
+              <span class="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">⏳ รอตรวจ ${pendingCount} คน</span>
+              <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">✅ ตรวจแล้ว ${gradedCount} คน</span>
+            </div>
+          </div>
+
           <div class="space-y-6 mt-4">
             ${submissions.length === 0 ? `
-              <div class="text-center py-12 text-slate-400 text-sm">ยังไม่มีนักเรียนส่งงานในหัวข้อนี้</div>
+              <div class="text-center py-12 text-slate-400 text-sm font-heading">ยังไม่มีนักเรียนส่งงานในหัวข้อนี้</div>
             ` : submissions.map((sub, idx) => `
               <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 relative group">
                 <div class="flex justify-between items-start gap-2 border-b border-slate-200/60 pb-2">
                   <div class="flex items-center gap-2">
-                    <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
+                    <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs font-heading">
                       ${idx + 1}
                     </span>
                     <div>
@@ -1400,13 +1426,13 @@ export class HomeworkModule {
                   </div>
 
                   <div class="flex items-center gap-2">
-                    <span class="px-2.5 py-1 rounded-full text-xs font-bold ${
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold font-heading ${
                       sub.status === 'Graded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                     }">
                       ${sub.status === 'Graded' ? `ตรวจแล้ว (${sub.score}/${hw.maxPoints})` : 'รอการตรวจ'}
                     </span>
 
-                    <button type="button" data-del-sub="${sub.studentId}" data-student-name="${decodeMojibakeThai(sub.studentName)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2 py-1 hover:bg-rose-50 rounded-lg transition-all" title="ลบงานชิ้นนี้">
+                    <button type="button" data-del-sub="${sub.studentId}" data-student-name="${decodeMojibakeThai(sub.studentName)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2 py-1 hover:bg-rose-50 rounded-lg transition-all font-heading" title="ลบงานชิ้นนี้">
                       🗑️ ลบงาน
                     </button>
                   </div>
@@ -1414,19 +1440,19 @@ export class HomeworkModule {
 
                 <div class="space-y-2 text-xs">
                   <div>
-                    <span class="font-semibold text-slate-700">ข้อความคำตอบนักเรียน:</span>
-                    <p class="text-slate-800 bg-white p-3 rounded-xl border border-slate-200 mt-1 whitespace-pre-line">${decodeMojibakeThai(sub.textResponse || 'ไม่ได้พิมพ์ข้อความเพิ่มเติม')}</p>
+                    <span class="font-semibold text-slate-700 font-heading">ข้อความคำตอบนักเรียน:</span>
+                    <p class="text-slate-800 bg-white p-3 rounded-xl border border-slate-200 mt-1 whitespace-pre-line font-sans">${decodeMojibakeThai(sub.textResponse || 'ไม่ได้พิมพ์ข้อความเพิ่มเติม')}</p>
                   </div>
 
                   ${sub.imageFile ? `
                     <div class="pt-2 border-t border-slate-100">
-                      <div class="font-bold text-slate-700 mb-1.5 flex items-center justify-between">
+                      <div class="font-bold text-slate-700 mb-1.5 flex items-center justify-between font-heading">
                         <span class="flex items-center gap-1">📸 รูปภาพงานที่ส่ง (Cloudinary CDN):</span>
                         <span class="text-[11px] font-semibold text-indigo-600">🔍 คลิกรูปเพื่อดูขนาดย่อ/ขยายรูปเต็ม</span>
                       </div>
                       <div class="max-w-md rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900/5 relative group cursor-pointer" data-preview-img="${sub.imageFile}" data-student-name="${decodeMojibakeThai(sub.studentName)}">
                         <img src="${sub.imageFile}" class="w-full max-h-64 object-contain group-hover:scale-105 transition-transform">
-                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-[2px]">
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-[2px] font-heading">
                           <span class="text-base">🔍</span> คลิกเพื่อเปิดรูปภาพขนาดใหญ่
                         </div>
                       </div>
@@ -1436,11 +1462,11 @@ export class HomeworkModule {
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">ให้คะแนน (เต็ม ${hw.maxPoints})</label>
-                    <input type="number" max="${hw.maxPoints}" data-sub-idx="${idx}" class="sub-score-input input-field py-1 text-xs" value="${sub.score !== null ? sub.score : ''}" placeholder="ระบุคะแนน">
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">ให้คะแนน (เต็ม ${hw.maxPoints})</label>
+                    <input type="number" max="${hw.maxPoints}" data-sub-idx="${idx}" class="sub-score-input input-field py-1 text-xs" value="${sub.score !== null && sub.score !== undefined ? sub.score : ''}" placeholder="ระบุคะแนน">
                   </div>
                   <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">คำแนะนำ / ความเห็นครู</label>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">คำแนะนำ / ความเห็นครู</label>
                     <input type="text" data-sub-idx="${idx}" class="sub-feedback-input input-field py-1 text-xs" value="${sub.feedback || ''}" placeholder="เช่น ทำได้เยี่ยมมาก!">
                   </div>
                 </div>
