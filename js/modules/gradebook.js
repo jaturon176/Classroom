@@ -63,8 +63,10 @@ export class GradebookModule {
 
       homeworkList.forEach(hw => {
         totalHwPoints += (hw.maxPoints || 20);
-        const sub = hw.submissions ? hw.submissions.find(subItem => subItem.studentId === s.studentId) : null;
-        if (sub && sub.score !== null) {
+        const rawSubs = hw.submissions || {};
+        const subsList = Array.isArray(rawSubs) ? rawSubs : Object.values(rawSubs);
+        const sub = subsList.find(subItem => subItem && subItem.studentId === s.studentId);
+        if (sub && sub.score !== null && sub.score !== undefined) {
           earnedHwPoints += sub.score;
         }
       });

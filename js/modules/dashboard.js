@@ -62,7 +62,13 @@ export class DashboardModule {
 
     const totalStudents = users.filter(u => u.role === 'Student').length;
     const activeCourses = courses.length;
-    const pendingSubmissions = homework.reduce((acc, hw) => acc + (hw.submissions ? hw.submissions.filter(s => s.status === 'Pending').length : 0), 0);
+    const pendingSubmissions = homework.reduce((acc, hw) => {
+      if (!hw.submissions) return acc;
+      const rawSubs = hw.submissions;
+      const subsList = Array.isArray(rawSubs) ? rawSubs : Object.values(rawSubs);
+      const pending = subsList.filter(s => s && typeof s === 'object' && s.status === 'Pending').length;
+      return acc + pending;
+    }, 0);
     const totalQuizzes = quizzes.length;
 
     containerEl.innerHTML = `
