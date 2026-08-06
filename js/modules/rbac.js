@@ -345,7 +345,7 @@ export class RBACModule {
     });
   }
 
-  // Render Login Portal View (Ultra-modern, Elegant World-Class Design with Dynamic Permanent School Logo)
+  // Render Login Portal View (Dual-Panel Split Screen Matching Reference Image 2)
   renderLoginScreen(containerEl) {
     let logoContent = './logo school.jpg';
     try {
@@ -365,44 +365,89 @@ export class RBACModule {
       : `<span>${logoContent}</span>`;
 
     containerEl.innerHTML = `
-      <div class="min-h-[75vh] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
-        <div class="relative w-full max-w-md">
-          <!-- Soft Ambient Glow Effects -->
-          <div class="absolute -top-10 -left-10 w-48 h-48 bg-indigo-400/20 rounded-full blur-3xl pointer-events-none"></div>
-          <div class="absolute -bottom-10 -right-10 w-48 h-48 bg-purple-400/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="min-h-[82vh] flex items-center justify-center p-3 sm:p-6 animate-fade-in font-sans">
+        
+        <!-- Main Dual-Panel Split Login Card (Matching Reference Image 2) -->
+        <div class="glass-card w-full max-w-4xl rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row border border-sky-900/20 bg-white">
+          
+          <!-- Left Panel: System Title, Logo Crest & System Features (45% Width) -->
+          <div class="w-full md:w-[45%] bg-gradient-to-br from-[#063b5f] via-[#094d7b] to-[#042844] text-white p-7 sm:p-10 flex flex-col justify-between relative overflow-hidden">
+            
+            <!-- Ambient Light Blobs -->
+            <div class="absolute -top-12 -left-12 w-48 h-48 bg-sky-400/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -right-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
-          <!-- Main Login Card -->
-          <div class="glass-card relative w-full p-8 md:p-10 rounded-3xl shadow-xl bg-white/95 border border-slate-200/80 space-y-7 backdrop-blur-xl">
-            <!-- Header Branding -->
-            <div class="text-center space-y-3">
-              <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 mx-auto flex items-center justify-center text-white text-3xl font-extrabold shadow-lg shadow-indigo-500/25 transition-transform hover:scale-105 overflow-hidden border border-white">
-                ${logoHtml}
+            <div class="relative z-10 space-y-6">
+              
+              <!-- Circular White Crest Logo Badge -->
+              <div class="text-center space-y-4">
+                <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white p-2 shadow-2xl shadow-sky-950/60 mx-auto flex items-center justify-center overflow-hidden border-2 border-sky-100/90 transition-transform hover:scale-105">
+                  ${logoHtml}
+                </div>
+
+                <div>
+                  <h1 class="text-2xl sm:text-3xl font-bold font-heading text-white tracking-tight leading-snug">
+                    Krunoii Classroom
+                  </h1>
+                  <p class="text-xs sm:text-sm text-sky-200 font-medium font-heading mt-1 leading-relaxed">
+                    ระบบบริหารจัดการห้องเรียนออนไลน์
+                  </p>
+                </div>
               </div>
-              <div class="space-y-1">
-                <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">เข้าสู่ระบบ</h2>
-                <p class="text-xs text-slate-500 font-heading">Krunoii-Classroom Platform (Smart Learning System)</p>
+
+              <!-- System Features List (คุณสมบัติของระบบ) -->
+              <div class="space-y-2.5 pt-3 border-t border-sky-400/20 text-xs font-heading">
+                <div class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                  <span>✨</span> คุณสมบัติเด่นของระบบ
+                </div>
+
+                <div class="flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 text-sky-100 text-xs sm:text-sm font-medium">
+                  <span class="text-base">📚</span>
+                  <span>ระบบสั่งการบ้านและตรวจงานออนไลน์</span>
+                </div>
+                <div class="flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 text-sky-100 text-xs sm:text-sm font-medium">
+                  <span class="text-base">✨</span>
+                  <span>แบบทดสอบอัตโนมัติพร้อมวิเคราะห์คะแนน</span>
+                </div>
+                <div class="flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 text-sky-100 text-xs sm:text-sm font-medium">
+                  <span class="text-base">⏱️</span>
+                  <span>ระบบเช็กชื่อเข้าเรียนรายคาบตามเวลาจริง</span>
+                </div>
+                <div class="flex items-center gap-2.5 bg-white/10 backdrop-blur-md px-3.5 py-2.5 rounded-xl border border-white/10 text-sky-100 text-xs sm:text-sm font-medium">
+                  <span class="text-base">📊</span>
+                  <span>สมุดสรุปคะแนนและออกรายงาน PDF / Excel</span>
+                </div>
               </div>
             </div>
+          </div>
 
-            <!-- Login Form -->
-            <form id="login-form" class="space-y-5">
+          <!-- Right Panel: Modern Clean Login Form (55% Width) -->
+          <div class="w-full md:w-[55%] bg-white p-7 sm:p-10 flex flex-col justify-center space-y-6">
+            
+            <div class="space-y-1">
+              <h2 class="text-2xl sm:text-3xl font-bold font-heading text-slate-900 tracking-tight">เข้าสู่ระบบ</h2>
+              <p class="text-xs sm:text-sm text-slate-500 font-heading">กรอกชื่อผู้ใช้และรหัสผ่านของคุณเพื่อเข้าใช้งาน</p>
+            </div>
+
+            <!-- Form -->
+            <form id="login-form" class="space-y-4">
               <div>
-                <label class="block text-xs font-bold font-heading text-slate-700 mb-1.5 flex items-center gap-1.5">
-                  <span>👤</span> ชื่อผู้ใช้ / รหัสนักเรียน / อีเมล
+                <label class="block text-xs sm:text-sm font-bold font-heading text-slate-700 mb-1.5 flex items-center gap-1.5">
+                  <span>👤</span> ชื่อผู้ใช้งาน / รหัสนักเรียน / อีเมล
                 </label>
                 <div class="relative">
                   <input 
                     type="text" 
                     id="login-input" 
                     required 
-                    class="input-field py-3 px-4 text-xs sm:text-sm bg-slate-50/70 border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all rounded-2xl" 
+                    class="input-field py-3 px-4 text-xs sm:text-sm bg-slate-50 border-slate-200 focus:bg-white focus:border-sky-600 focus:ring-2 focus:ring-sky-100 transition-all rounded-xl font-sans" 
                     placeholder="กรอกชื่อผู้ใช้ หรือ รหัสนักเรียน..."
                   >
                 </div>
               </div>
 
               <div>
-                <label class="block text-xs font-bold font-heading text-slate-700 mb-1.5 flex items-center gap-1.5">
+                <label class="block text-xs sm:text-sm font-bold font-heading text-slate-700 mb-1.5 flex items-center gap-1.5">
                   <span>🔒</span> รหัสผ่าน
                 </label>
                 <div class="relative">
@@ -410,38 +455,33 @@ export class RBACModule {
                     type="password" 
                     id="login-pass" 
                     required 
-                    class="input-field py-3 pl-4 pr-12 text-xs sm:text-sm bg-slate-50/70 border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all rounded-2xl" 
+                    class="input-field py-3 pl-4 pr-12 text-xs sm:text-sm bg-slate-50 border-slate-200 focus:bg-white focus:border-sky-600 focus:ring-2 focus:ring-sky-100 transition-all rounded-xl font-sans" 
                     placeholder="••••••••"
                   >
                   <button 
                     type="button" 
                     id="btn-toggle-login-pass" 
-                    class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-lg p-1 transition-colors flex items-center justify-center" 
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-lg p-1 transition-colors flex items-center justify-center" 
                     title="แสดง/ซ่อนรหัสผ่าน"
                   >
                     👁️
                   </button>
                 </div>
-                <p class="text-[11px] text-slate-400 mt-1.5 flex items-center gap-1 font-heading">
-                  <span>💡</span> นักเรียนใช้รหัสนักเรียนเป็นชื่อผู้ใช้และรหัสผ่านเริ่มต้น
-                </p>
               </div>
 
-              <div id="login-error" class="hidden p-3.5 bg-rose-50 border border-rose-200/80 rounded-2xl text-xs text-rose-600 font-medium text-center shadow-sm"></div>
+              <div id="login-error" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 font-medium text-center font-heading"></div>
 
               <button 
                 type="submit" 
-                class="w-full btn-primary py-3.5 rounded-2xl font-bold font-heading text-sm sm:text-base shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all flex items-center justify-center gap-2"
+                class="w-full bg-gradient-to-r from-[#084b72] to-[#0284c7] hover:from-[#053754] hover:to-[#026aa7] text-white py-3.5 rounded-xl font-bold font-heading text-sm sm:text-base shadow-lg shadow-sky-900/20 transition-all flex items-center justify-center gap-2"
               >
                 <span>🔑</span> เข้าสู่ระบบ (Sign In)
               </button>
             </form>
 
-            <!-- Bottom Security Footer -->
-            <div class="pt-4 border-t border-slate-100 text-center">
-              <div class="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-200/60">
-                <span>🛡️</span> 256-Bit Encrypted Realtime Cloud Access
-              </div>
+            <!-- Footer Security Note -->
+            <div class="pt-2 text-center text-xs text-slate-400 font-heading">
+              🛡️ 256-Bit Encrypted Realtime Cloud Security System
             </div>
           </div>
         </div>
