@@ -1107,13 +1107,21 @@ export class QuizModule {
         ? currentUser.studentId 
         : (currentUser.username || currentUser.id || ('STD_' + Date.now()));
 
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const localTimeString = `${year}-${month}-${day} ${hours}:${mins}`;
+
       const newResult = {
         id: 'res_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
         studentId: stdId,
         studentName: currentUser.name,
         score: score,
         maxScore: maxScore,
-        completedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
+        completedAt: localTimeString
       };
 
       firebaseService.addQuizResult(quiz.id, newResult);

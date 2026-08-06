@@ -1009,10 +1009,18 @@ export class HomeworkModule {
       const submissions = hw.submissions || [];
       const index = submissions.findIndex(s => s.studentId === currentUser.studentId);
 
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      const localTimeString = `${year}-${month}-${day} ${hours}:${mins}`;
+
       const newSub = {
         studentId: currentUser.studentId || 'STD6701',
         studentName: currentUser.name,
-        submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        submittedAt: localTimeString,
         textResponse: document.getElementById('sub-text').value.trim(),
         imageFile: uploadedImageUrl,
         score: index !== -1 ? submissions[index].score : null,
