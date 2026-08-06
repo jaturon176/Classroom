@@ -264,7 +264,11 @@ class SchoolApp {
   }
 }
 
-// Instantiate on DOM load
-window.addEventListener('DOMContentLoaded', () => {
+// Instantiate safely whether DOMContentLoaded has already fired or not
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', () => {
+    window.app = new SchoolApp();
+  });
+} else {
   window.app = new SchoolApp();
-});
+}
