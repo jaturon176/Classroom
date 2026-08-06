@@ -131,38 +131,42 @@ class SchoolApp {
     }
 
     headerContainer.innerHTML = `
-      <header class="glass-nav sticky top-0 z-50 px-4 lg:px-8 py-2.5 transition-colors">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-          <!-- Logo & Brand -->
-          <div class="flex items-center justify-between w-full md:w-auto">
-            <div class="flex items-center gap-3 cursor-pointer group" id="brand-logo">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-extrabold shadow-md shadow-sky-500/20 group-hover:scale-105 transition-transform">
+      <header class="glass-nav sticky top-0 z-50 px-3 lg:px-6 py-2 transition-all">
+        <div class="max-w-7xl mx-auto flex flex-col xl:flex-row items-center justify-between gap-2.5">
+          
+          <!-- Left: Logo & School Name (Strictly Single Line, No Line Wrap) -->
+          <div class="flex items-center justify-between w-full xl:w-auto shrink-0">
+            <div class="flex items-center gap-2.5 cursor-pointer group" id="brand-logo">
+              <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm font-extrabold shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform">
                 ⚡
               </div>
-              <div>
-                <div class="font-heading font-extrabold text-base tracking-tight text-slate-800 flex items-center gap-2">
-                  ${decodeMojibakeThai(settings.schoolName)} <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">Central Server Live</span>
+              <div class="whitespace-nowrap">
+                <div class="font-heading font-extrabold text-sm text-slate-900 tracking-tight flex items-center gap-2 whitespace-nowrap">
+                  <span>${decodeMojibakeThai(settings.schoolName)}</span>
+                  <span class="inline-flex items-center gap-1 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Central Server Live
+                  </span>
                 </div>
-                <div class="text-[11px] text-slate-500 font-heading">ระบบบริหารจัดการห้องเรียนอัจฉริยะ (${settings.semester}/${settings.academicYear})</div>
+                <div class="text-[10px] text-slate-500 font-heading whitespace-nowrap">ระบบบริหารจัดการห้องเรียนอัจฉริยะ (${settings.semester}/${settings.academicYear})</div>
               </div>
             </div>
 
             <!-- Mobile Controls -->
-            <div class="flex md:hidden items-center gap-2">
-              <button id="btn-avatar-mobile" class="w-8 h-8 rounded-full bg-white border border-sky-300 flex items-center justify-center overflow-hidden">
+            <div class="flex xl:hidden items-center gap-1.5">
+              <button id="btn-avatar-mobile" class="w-7 h-7 rounded-full bg-white border border-sky-300 flex items-center justify-center overflow-hidden">
                 ${avatarContent}
               </button>
-              <button id="btn-change-pass-mobile" class="text-xs text-sky-800 font-bold px-2.5 py-1 bg-sky-100 rounded-xl border border-sky-200">🔑 รหัสผ่าน</button>
-              <button id="btn-logout-mobile" class="text-xs text-rose-600 font-bold px-2.5 py-1 bg-rose-50 rounded-xl border border-rose-200">🚪 ออกจากระบบ</button>
+              <button id="btn-change-pass-mobile" class="text-[11px] text-sky-800 font-bold px-2 py-1 bg-sky-50 rounded-lg border border-sky-200">🔑 รหัสผ่าน</button>
+              <button id="btn-logout-mobile" class="text-[11px] text-rose-600 font-bold px-2 py-1 bg-rose-50 rounded-lg border border-rose-200">🚪 ออกจากระบบ</button>
             </div>
           </div>
 
-          <!-- Navigation Tabs -->
-          <nav class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto py-1 scrollbar-none">
+          <!-- Center: Navigation Tabs (Pro Compact Pills) -->
+          <nav class="flex items-center gap-1 overflow-x-auto w-full xl:w-auto py-0.5 scrollbar-none justify-start xl:justify-center">
             ${visibleTabs.map(t => `
               <button 
                 data-tab="${t.id}" 
-                class="tab-btn px-4 py-2 rounded-xl text-xs font-heading whitespace-nowrap transition-all ${
+                class="tab-btn px-3 py-1.5 rounded-xl text-xs font-heading whitespace-nowrap font-medium transition-all ${
                   this.activeTab === t.id ? 'nav-tab-active' : 'nav-tab-inactive'
                 }"
               >
@@ -171,43 +175,43 @@ class SchoolApp {
             `).join('')}
           </nav>
 
-          <!-- Right Toolbar & User Profile Avatar Actions -->
-          <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+          <!-- Right: Toolbar & User Profile Avatar Actions (Compact Pro Layout) -->
+          <div class="hidden xl:flex items-center gap-2 shrink-0">
             <!-- Sync Status Badge -->
             <div id="sync-status-badge"></div>
 
-            <!-- Read-Only Static Role Badge -->
-            <div class="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-200 text-xs font-heading font-bold ${
+            <!-- Role Badge -->
+            <div class="flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-[11px] font-heading font-semibold ${
               currentUser.role === 'Admin' ? 'text-purple-700 bg-purple-50/80 border-purple-200' :
-              currentUser.role === 'Teacher' ? 'text-sky-800 bg-sky-100/80 border-sky-200' :
+              currentUser.role === 'Teacher' ? 'text-indigo-700 bg-indigo-50/80 border-indigo-200' :
               'text-emerald-700 bg-emerald-50/80 border-emerald-200'
             }">
-              <span class="text-[11px] text-slate-400 font-normal">สิทธิ์:</span>
+              <span class="text-slate-400 font-normal text-[10px]">สิทธิ์:</span>
               <span>${currentUser.role === 'Admin' ? '👑 Admin' : currentUser.role === 'Teacher' ? '👨‍🏫 Teacher' : '🎓 Student'}</span>
             </div>
 
-            <!-- User Profile Avatar & Actions -->
-            <div class="hidden sm:flex items-center gap-3 pl-3 border-l border-sky-200/90">
+            <!-- Profile Info & Actions -->
+            <div class="flex items-center gap-2 pl-2 border-l border-slate-200">
               <button id="btn-user-avatar" class="relative group cursor-pointer" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
-                <div class="w-9 h-9 rounded-full bg-white border-2 border-sky-400 group-hover:border-indigo-600 flex items-center justify-center overflow-hidden shadow-sm transition-all group-hover:scale-105">
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-300 group-hover:border-indigo-500 flex items-center justify-center overflow-hidden shadow-xs transition-all group-hover:scale-105">
                   ${avatarContent}
                 </div>
-                <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-sky-600 text-white rounded-full text-[9px] flex items-center justify-center shadow">✏️</span>
+                <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-indigo-600 text-white rounded-full text-[8px] flex items-center justify-center shadow">✏️</span>
               </button>
 
-              <div class="text-right">
-                <div class="text-xs font-heading font-bold text-slate-900 leading-none">${decodeMojibakeThai(currentUser.name)}</div>
-                <div class="text-[10px] text-slate-500 font-mono mt-1">${currentUser.email || currentUser.studentId || ''}</div>
+              <div class="text-left max-w-[120px] truncate">
+                <div class="text-xs font-heading font-bold text-slate-800 leading-tight truncate">${decodeMojibakeThai(currentUser.name)}</div>
+                <div class="text-[10px] text-slate-400 font-mono leading-tight truncate">${currentUser.email || currentUser.studentId || ''}</div>
               </div>
 
-              <!-- Password Change Button -->
-              <button id="btn-change-pass" class="bg-white/90 text-sky-800 hover:bg-sky-100 border border-sky-300 text-xs px-3 py-1.5 rounded-xl font-heading font-semibold transition-all shadow-sm flex items-center gap-1">
-                <span>🔑</span> เปลี่ยนรหัสผ่าน
+              <!-- Password Change Button (Compact) -->
+              <button id="btn-change-pass" class="bg-slate-50 hover:bg-indigo-50 text-slate-700 hover:text-indigo-700 border border-slate-200 hover:border-indigo-200 text-[11px] px-2.5 py-1 rounded-lg font-heading font-semibold transition-all shadow-xs flex items-center gap-1">
+                <span>🔑</span> เปลี่ยนรหัส
               </button>
 
-              <!-- Logout Button -->
-              <button id="btn-logout" class="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 text-xs px-3.5 py-1.5 rounded-xl font-heading font-semibold transition-all shadow-sm">
-                🚪 ออกจากระบบ
+              <!-- Logout Button (Compact) -->
+              <button id="btn-logout" class="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 text-[11px] px-2.5 py-1 rounded-lg font-heading font-semibold transition-all shadow-xs flex items-center gap-1">
+                <span>🚪</span> ออก
               </button>
             </div>
           </div>
