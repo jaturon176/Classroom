@@ -383,12 +383,22 @@ export class HomeworkModule {
     const teachers = users.filter(u => u.role === 'Teacher' || u.role === 'Admin');
     const studentUsers = users.filter(u => u.role === 'Student');
 
-    const availableRooms = [...new Set(studentUsers.map(s => s.room).filter(r => r && r !== '-'))].sort();
-    if (availableRooms.length === 0) availableRooms.push('1', '2', '3');
+    const availableGrades = ['All', ...new Set(studentUsers.map(s => s.grade).filter(g => g && g !== '-'))];
+    if (availableGrades.length === 1) availableGrades.push('ม.1', 'ม.2', 'ม.3', 'ปวช.1', 'ปวช.2');
+
+    const getRoomsForGrade = (targetGrade) => {
+      let filtered = studentUsers;
+      if (targetGrade !== 'All') {
+        filtered = studentUsers.filter(s => s.grade === targetGrade);
+      }
+      const rooms = [...new Set(filtered.map(s => s.room).filter(r => r && r !== '-'))].sort();
+      if (rooms.length === 0) rooms.push('1', '2', '3');
+      return rooms;
+    };
 
     const modalHTML = `
       <div id="course-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
-        <div class="glass-card w-full max-w-md p-6 rounded-3xl shadow-xl relative border border-slate-200 bg-white">
+        <div class="glass-card w-full max-w-md p-6 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] overflow-y-auto">
           <div class="flex justify-between items-center pb-4 border-b border-slate-100">
             <h3 class="text-xl font-bold text-slate-900 font-heading">
               ${isEdit ? '✏️ แก้ไขข้อมูลรายวิชา' : '➕ เพิ่มรายวิชาใหม่'}
@@ -418,20 +428,26 @@ export class HomeworkModule {
               </select>
             </div>
 
-            <div class="p-3 bg-indigo-50/80 border border-indigo-100 rounded-2xl space-y-2">
-              <label class="block text-xs font-bold text-indigo-900">🏫 เลือกห้องเรียนที่สอน (Multi-Room Selection)</label>
-              <div class="grid grid-cols-3 gap-2">
-                <label class="flex items-center gap-1.5 text-xs text-slate-700 font-semibold cursor-pointer">
-                  <input type="checkbox" name="crs_room_check" value="All" ${isEdit && targetCourse.targetRooms && targetCourse.targetRooms.includes('All') ? 'checked' : ''} class="rounded text-indigo-600">
-                  <span>ทุกห้อง</span>
-                </label>
-                ${availableRooms.map(r => `
-                  <label class="flex items-center gap-1.5 text-xs text-slate-700 font-semibold cursor-pointer">
-                    <input type="checkbox" name="crs_room_check" value="${r}" ${isEdit && targetCourse.targetRooms && targetCourse.targetRooms.includes(r) ? 'checked' : ''} class="rounded text-indigo-600">
-                    <span>ห้อง ${r}</span>
-                  </label>
-                `).join('')}
+            <!-- Target Grade & Dynamic Multi-Room Selection -->
+            <div class="p-4 bg-indigo-50/80 border border-indigo-100 rounded-2xl space-y-3">
+              <label class="block text-xs font-bold text-indigo-900">🏫 กำหนดระดับชั้นและห้องเรียนที่สอน (Multi-Room Selection)</label>
+              
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-600 mb-1">1. เลือกระดับชั้นก่อน</label>
+                <select id="crs-target-grade" class="input-field py-1 text-xs">
+                  ${availableGrades.map(g => `
+                    <option value="${g}" ${isEdit && targetCourse.targetGrade === g ? 'selected' : ''}>
+                      ${g === 'All' ? '🌐 ทุกระดับชั้น (All Grades)' : g}
+                    </option>
+                  `).join('')}
+                </select>
               </div>
+
+              <div>
+                <label class="block text-[11px] font-bold text-indigo-900 mb-1">2. เลือกห้องเรียน (ดึงเฉพาะห้องที่มีในระบบของระดับชั้นที่เลือก สามารถเลือกได้หลายห้อง)</label>
+                <div id="crs-rooms-checklist" class="grid grid-cols-3 gap-2 pt-1"></div>
+              </div>
+              <p class="text-[11px] text-indigo-700 italic">* สามารถติ๊กเลือกหลายห้องพร้อมกันได้</p>
             </div>
 
             <div>
@@ -453,6 +469,31 @@ export class HomeworkModule {
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     const modalEl = document.getElementById('course-modal');
 
+    const gradeSelect = modalEl.querySelector('#crs-target-grade');
+    const checklistContainer = modalEl.querySelector('#crs-rooms-checklist');
+
+    const updateCourseRoomChecklist = () => {
+      const selectedGrade = gradeSelect.value;
+      const rooms = getRoomsForGrade(selectedGrade);
+      const currentSelectedRooms = isEdit && targetCourse.targetRooms ? targetCourse.targetRooms : ['All'];
+
+      checklistContainer.innerHTML = `
+        <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-indigo-100/60">
+          <input type="checkbox" name="crs_room_check" value="All" ${currentSelectedRooms.includes('All') ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded">
+          <span>🌐 ทุกห้อง</span>
+        </label>
+        ${rooms.map(r => `
+          <label class="flex items-center gap-2 p-2 bg-white rounded-xl border border-slate-200 text-xs font-semibold text-slate-800 cursor-pointer hover:bg-indigo-100/60">
+            <input type="checkbox" name="crs_room_check" value="${r}" ${currentSelectedRooms.includes(r) ? 'checked' : ''} class="w-4 h-4 text-indigo-600 rounded">
+            <span>🏫 ห้อง ${r}</span>
+          </label>
+        `).join('')}
+      `;
+    };
+
+    updateCourseRoomChecklist();
+    gradeSelect.addEventListener('change', updateCourseRoomChecklist);
+
     modalEl.querySelectorAll('#close-course-modal, #close-course-btn').forEach(b => b.addEventListener('click', () => modalEl.remove()));
 
     modalEl.querySelector('#crs-form').addEventListener('submit', async (e) => {
@@ -466,6 +507,7 @@ export class HomeworkModule {
         code: document.getElementById('crs-code').value.trim(),
         name: document.getElementById('crs-name').value.trim(),
         teacher: document.getElementById('crs-teacher').value,
+        targetGrade: document.getElementById('crs-target-grade').value,
         targetRooms: selectedRooms,
         credits: parseFloat(document.getElementById('crs-credits').value),
         color: 'from-blue-600 to-indigo-600'
