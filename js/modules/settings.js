@@ -37,7 +37,7 @@ export class SettingsModule {
       semester: 'ภาคเรียนที่ 1',
       theme: 'ocean',
       customBgColor: '',
-      bannerTitle: 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่',
+      bannerTitle: 'ยินดีต้อนรับสู่ห้องเรียนครูน้อย',
       showClock: true,
       pageSize: 10,
       allowStudentAvatar: true
@@ -55,6 +55,9 @@ export class SettingsModule {
         };
         if (!this.settings.schoolLogo || this.settings.schoolLogo === '⚡') {
           this.settings.schoolLogo = './logo school.jpg';
+        }
+        if (!this.settings.bannerTitle || this.settings.bannerTitle === 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่') {
+          this.settings.bannerTitle = 'ยินดีต้อนรับสู่ห้องเรียนครูน้อย';
         }
       } catch (e) {
         this.settings = defaultSettings;

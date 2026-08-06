@@ -54,7 +54,7 @@ export class DashboardModule {
     const quizzes = firebaseService.getCollection('quizzes');
     const currentUser = this.rbac.getCurrentUser();
     const settings = this.settingsModule ? this.settingsModule.getSettings() : {
-      bannerTitle: 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่',
+      bannerTitle: 'ยินดีต้อนรับสู่ห้องเรียนครูน้อย',
       schoolName: 'Cloud Classroom',
       academicYear: '2026',
       semester: 'ภาคเรียนที่ 1'
