@@ -345,8 +345,25 @@ export class RBACModule {
     });
   }
 
-  // Render Login Portal View (Ultra-modern, Elegant World-Class Design)
+  // Render Login Portal View (Ultra-modern, Elegant World-Class Design with Dynamic School Logo)
   renderLoginScreen(containerEl) {
+    let logoContent = '⚡';
+    try {
+      const rawSettings = localStorage.getItem('antigravity_school_settings');
+      if (rawSettings) {
+        const parsed = JSON.parse(rawSettings);
+        if (parsed.schoolLogo) {
+          logoContent = parsed.schoolLogo;
+        }
+      }
+    } catch (e) {
+      logoContent = '⚡';
+    }
+
+    const logoHtml = logoContent.startsWith('http') || logoContent.startsWith('data:image')
+      ? `<img src="${logoContent}" class="w-full h-full object-cover">`
+      : `<span>${logoContent}</span>`;
+
     containerEl.innerHTML = `
       <div class="min-h-[75vh] flex items-center justify-center p-4 sm:p-6 animate-fade-in">
         <div class="relative w-full max-w-md">
@@ -358,8 +375,8 @@ export class RBACModule {
           <div class="glass-card relative w-full p-8 md:p-10 rounded-3xl shadow-xl bg-white/95 border border-slate-200/80 space-y-7 backdrop-blur-xl">
             <!-- Header Branding -->
             <div class="text-center space-y-3">
-              <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 mx-auto flex items-center justify-center text-white text-3xl font-extrabold shadow-lg shadow-indigo-500/25 transition-transform hover:scale-105">
-                ⚡
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 mx-auto flex items-center justify-center text-white text-3xl font-extrabold shadow-lg shadow-indigo-500/25 transition-transform hover:scale-105 overflow-hidden border border-white">
+                ${logoHtml}
               </div>
               <div class="space-y-1">
                 <h2 class="text-2xl sm:text-3xl font-extrabold font-heading text-slate-900 tracking-tight">เข้าสู่ระบบ</h2>
