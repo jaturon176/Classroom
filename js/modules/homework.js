@@ -634,6 +634,9 @@ export class HomeworkModule {
               <!-- Image List Preview -->
               <div id="hw-attached-imgs-grid" class="grid grid-cols-3 gap-2"></div>
 
+              <!-- Animated Upload Status Indicator -->
+              <div id="hw-img-upload-status" class="hidden text-[11px] font-bold p-2.5 rounded-xl border transition-all text-center"></div>
+
               <div class="flex flex-col sm:flex-row gap-2 pt-1">
                 <label class="btn-secondary text-xs px-3 py-2 rounded-xl font-heading font-bold cursor-pointer flex items-center justify-center gap-1 shrink-0">
                   <span>📸 เลือกรูปภาพจากเครื่อง</span>
@@ -659,6 +662,16 @@ export class HomeworkModule {
               <div class="flex items-center gap-1.5 pt-1">
                 <input type="url" id="hw-yt-url-input" class="input-field py-1.5 text-xs border-rose-200" placeholder="วางลิงก์ YouTube (เช่น https://www.youtube.com/watch?v=...)">
                 <button type="button" id="btn-add-yt-url" class="btn-primary text-xs px-3 py-2 rounded-xl font-bold whitespace-nowrap bg-rose-600 hover:bg-rose-700">➕ เพิ่มวิดีโอ</button>
+              </div>
+
+              <!-- Instant YouTube Live Video Preview Box -->
+              <div id="hw-yt-instant-preview" class="hidden p-3 bg-slate-900 rounded-2xl border border-rose-200 text-center space-y-2">
+                <div class="text-[11px] font-bold text-rose-300 flex items-center justify-center gap-1.5 font-heading">
+                  <span>🎥 ตัวอย่างวิดีโอ (Instant Live Video Preview):</span>
+                </div>
+                <div class="aspect-video w-full rounded-xl overflow-hidden shadow-md bg-black">
+                  <iframe id="hw-yt-instant-iframe" src="" title="YouTube Video Preview" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full"></iframe>
+                </div>
               </div>
             </div>
 
@@ -727,14 +740,21 @@ export class HomeworkModule {
         ` : attachedVideos.map((ytUrl, idx) => {
           const ytId = extractYouTubeId(ytUrl);
           return `
-            <div class="flex items-center justify-between p-2 bg-white rounded-xl border border-rose-200 text-xs gap-2">
-              <div class="flex items-center gap-2 overflow-hidden">
-                ${ytId ? `<img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="w-12 h-8 object-cover rounded-lg shrink-0">` : '🎥'}
-                <span class="font-mono text-slate-700 truncate text-[11px]">${ytUrl}</span>
+            <div class="p-2.5 bg-white rounded-2xl border border-rose-200 text-xs space-y-2">
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 overflow-hidden">
+                  ${ytId ? `<img src="https://img.youtube.com/vi/${ytId}/hqdefault.jpg" class="w-12 h-8 object-cover rounded-lg shrink-0">` : '🎥'}
+                  <span class="font-mono text-slate-700 truncate text-[11px] font-bold">${ytUrl}</span>
+                </div>
+                <button type="button" data-remove-yt="${idx}" class="text-rose-600 hover:text-rose-800 text-xs font-bold shrink-0 px-2 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg">
+                  🗑️ ลบวิดีโอ
+                </button>
               </div>
-              <button type="button" data-remove-yt="${idx}" class="text-rose-600 hover:text-rose-800 text-xs font-bold shrink-0 p-1">
-                🗑️ ลบ
-              </button>
+              ${ytId ? `
+                <div class="aspect-video w-full rounded-xl overflow-hidden shadow-sm bg-black border border-slate-200">
+                  <iframe src="https://www.youtube.com/embed/${ytId}" title="Attached YouTube Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="w-full h-full"></iframe>
+                </div>
+              ` : ''}
             </div>
           `;
         }).join('');
@@ -752,10 +772,20 @@ export class HomeworkModule {
     renderAttachedImgs();
     renderAttachedYt();
 
-    // Image Upload Event Handlers
+    // Image Upload Event Handlers with Animated Status Message
+    const imgUploadStatus = modalEl.querySelector('#hw-img-upload-status');
+
     modalEl.querySelector('#hw-img-file-input')?.addEventListener('change', async (e) => {
       if (e.target.files.length > 0) {
+        if (imgUploadStatus) {
+          imgUploadStatus.className = 'text-[11px] font-bold p-2.5 rounded-xl border bg-amber-50 text-amber-800 border-amber-200 animate-pulse text-center block';
+          imgUploadStatus.innerHTML = `⏳ กำลังประมวลผลและอัปโหลดรูปภาพขึ้น Cloudinary CDN...`;
+        }
+
         for (let file of e.target.files) {
+          if (imgUploadStatus) {
+            imgUploadStatus.innerHTML = `⏳ กำลังอัปโหลดรูปภาพ <strong>${file.name}</strong> ขึ้น Cloudinary CDN...`;
+          }
           try {
             const cdnUrl = await uploadImageToCloudinary(file, 1200, 0.8);
             attachedImages.push(cdnUrl);
@@ -768,7 +798,13 @@ export class HomeworkModule {
             reader.readAsDataURL(file);
           }
         }
+
         renderAttachedImgs();
+        if (imgUploadStatus) {
+          imgUploadStatus.className = 'text-[11px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-center block';
+          imgUploadStatus.innerHTML = `✅ อัปโหลดรูปภาพขึ้น CDN สำเร็จแล้ว! (รวม ${attachedImages.length} รูป)`;
+          setTimeout(() => imgUploadStatus.classList.add('hidden'), 3500);
+        }
       }
     });
 
@@ -779,12 +815,38 @@ export class HomeworkModule {
         attachedImages.push(val);
         urlInput.value = '';
         renderAttachedImgs();
+        if (imgUploadStatus) {
+          imgUploadStatus.className = 'text-[11px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-center block';
+          imgUploadStatus.innerHTML = `✅ เพิ่ม URL รูปภาพสำเร็จ! (รวม ${attachedImages.length} รูป)`;
+          setTimeout(() => imgUploadStatus.classList.add('hidden'), 3000);
+        }
       }
     });
 
+    // YouTube Instant Live Video Preview Handlers
+    const ytInput = modalEl.querySelector('#hw-yt-url-input');
+    const instantPreviewBox = modalEl.querySelector('#hw-yt-instant-preview');
+    const instantIframe = modalEl.querySelector('#hw-yt-instant-iframe');
+
+    const updateYtInstantPreview = () => {
+      const val = ytInput ? ytInput.value.trim() : '';
+      const ytId = extractYouTubeId(val);
+      if (ytId && instantPreviewBox && instantIframe) {
+        instantIframe.src = `https://www.youtube.com/embed/${ytId}`;
+        instantPreviewBox.classList.remove('hidden');
+      } else if (instantPreviewBox && instantIframe) {
+        instantIframe.src = '';
+        instantPreviewBox.classList.add('hidden');
+      }
+    };
+
+    ytInput?.addEventListener('input', updateYtInstantPreview);
+    ytInput?.addEventListener('keyup', updateYtInstantPreview);
+    ytInput?.addEventListener('paste', () => setTimeout(updateYtInstantPreview, 50));
+    ytInput?.addEventListener('change', updateYtInstantPreview);
+
     // YouTube Add Event Handler
     modalEl.querySelector('#btn-add-yt-url')?.addEventListener('click', async () => {
-      const ytInput = modalEl.querySelector('#hw-yt-url-input');
       const val = ytInput ? ytInput.value.trim() : '';
       if (val) {
         const ytId = extractYouTubeId(val);
@@ -794,6 +856,7 @@ export class HomeworkModule {
         }
         attachedVideos.push(val);
         ytInput.value = '';
+        updateYtInstantPreview();
         renderAttachedYt();
       }
     });
