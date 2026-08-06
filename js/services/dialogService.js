@@ -179,3 +179,68 @@ export function showImagePreviewModal({
     });
   });
 }
+
+export function showPDFPreviewModal({
+  pdfUrl,
+  title = 'เอกสาร PDF ประกอบการเรียน'
+}) {
+  return new Promise((resolve) => {
+    const modalHTML = `
+      <div id="custom-pdf-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100] flex items-center justify-center p-3 sm:p-6 animate-fade-in">
+        <div class="glass-card w-full max-w-4xl h-[90vh] p-4 sm:p-6 rounded-3xl shadow-2xl relative border border-slate-700 bg-slate-900 text-white flex flex-col space-y-3 animate-scale-up">
+          
+          <!-- Header -->
+          <div class="flex justify-between items-center pb-3 border-b border-slate-800 shrink-0">
+            <div class="flex items-center gap-3">
+              <span class="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 text-lg">📄</span>
+              <div>
+                <h3 class="text-base font-bold font-heading text-slate-100">${title}</h3>
+                <p class="text-xs text-slate-400 font-heading">เปิดดูเอกสาร PDF แบบโต้ตอบออนไลน์</p>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <a href="${pdfUrl}" download="${title}.pdf" target="_blank" class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-xs font-bold text-white transition-all flex items-center gap-1 font-heading shadow-md">
+                <span>📥</span> ดาวน์โหลดเอกสาร
+              </a>
+              <button id="close-pdf-modal-btn" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white flex items-center justify-center text-lg font-bold transition-all">
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <!-- PDF Iframe Viewer Area -->
+          <div class="flex-1 w-full rounded-2xl overflow-hidden border border-slate-800 bg-slate-950">
+            <iframe src="${pdfUrl}#toolbar=1" class="w-full h-full" frameborder="0"></iframe>
+          </div>
+
+          <!-- Footer -->
+          <div class="flex justify-between items-center pt-2 text-xs text-slate-400 border-t border-slate-800 shrink-0">
+            <span class="text-[11px] text-slate-500 font-heading">📄 เอกสารประกอบการเรียนออนไลน์ Krunoii-Classroom</span>
+            <button id="close-pdf-modal-footer-btn" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold font-heading transition-all border border-slate-700">
+              ปิดหน้าต่าง PDF
+            </button>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    const modalEl = document.getElementById('custom-pdf-modal');
+
+    const cleanup = () => {
+      modalEl.classList.add('opacity-0', 'transition-opacity', 'duration-150');
+      setTimeout(() => {
+        modalEl.remove();
+        resolve(true);
+      }, 150);
+    };
+
+    modalEl.querySelectorAll('#close-pdf-modal-btn, #close-pdf-modal-footer-btn').forEach(b => b.addEventListener('click', cleanup));
+
+    modalEl.addEventListener('click', (e) => {
+      if (e.target === modalEl) cleanup();
+    });
+  });
+}

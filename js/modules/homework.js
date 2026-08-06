@@ -10,7 +10,7 @@
 
 import { firebaseService } from '../services/firebaseService.js';
 import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal, showAlertModal, showImagePreviewModal } from '../services/dialogService.js';
+import { showConfirmModal, showAlertModal, showImagePreviewModal, showPDFPreviewModal } from '../services/dialogService.js';
 import { uploadImageToCloudinary } from '../services/cloudinaryService.js';
 
 export function extractYouTubeId(url) {
@@ -172,6 +172,7 @@ export class HomeworkModule {
 
             const attachmentsImages = Array.isArray(hw.images) ? hw.images : (hw.imageUrl ? [hw.imageUrl] : []);
             const attachmentsVideos = Array.isArray(hw.youtubeVideos) ? hw.youtubeVideos : (hw.youtubeUrl ? [hw.youtubeUrl] : []);
+            const attachmentsPdfs = Array.isArray(hw.pdfFiles) ? hw.pdfFiles : (hw.pdfFile ? [hw.pdfFile] : []);
 
             return `
               <div class="glass-card p-6 md:p-7 rounded-3xl shadow-sm space-y-4 bg-white border border-slate-200/90">
@@ -198,7 +199,7 @@ export class HomeworkModule {
                 <!-- Attached Images Gallery -->
                 ${attachmentsImages.length > 0 ? `
                   <div class="pt-2 border-t border-slate-100 space-y-2">
-                    <div class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                    <div class="text-xs font-bold text-slate-700 flex items-center justify-between font-heading">
                       <span class="flex items-center gap-1">📸 รูปภาพประกอบโจทย์ (${attachmentsImages.length} รูป):</span>
                       <span class="text-[11px] font-semibold text-indigo-600">🔍 คลิกรูปเพื่อดูขนาดย่อ/ขยายรูปเต็ม</span>
                     </div>
@@ -218,7 +219,7 @@ export class HomeworkModule {
                 <!-- Embedded YouTube Players -->
                 ${attachmentsVideos.length > 0 ? `
                   <div class="pt-2 border-t border-slate-100 space-y-2">
-                    <div class="text-xs font-bold text-rose-700 flex items-center gap-1">
+                    <div class="text-xs font-bold text-rose-700 flex items-center gap-1 font-heading">
                       <span>🎥 วิดีโอสอนเพิ่มเติมจาก YouTube (${attachmentsVideos.length} วิดีโอ):</span>
                     </div>
                     <div class="grid grid-cols-1 ${attachmentsVideos.length > 1 ? 'md:grid-cols-2' : ''} gap-3">
@@ -235,6 +236,39 @@ export class HomeworkModule {
                               allowfullscreen 
                               class="w-full h-full"
                             ></iframe>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Embedded PDF Document Attachments -->
+                ${attachmentsPdfs.length > 0 ? `
+                  <div class="pt-2 border-t border-slate-100 space-y-2">
+                    <div class="text-xs font-bold text-rose-800 flex items-center gap-1 font-heading">
+                      <span>📄 เอกสาร PDF ประกอบการเรียน (${attachmentsPdfs.length} ไฟล์):</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      ${attachmentsPdfs.map((pdf, pIdx) => {
+                        const pdfUrl = typeof pdf === 'string' ? pdf : pdf.url;
+                        const pdfName = typeof pdf === 'object' && pdf.name ? pdf.name : `เอกสารประกอบการเรียน_${pIdx + 1}.pdf`;
+                        return `
+                          <div class="p-3 bg-rose-50/70 border border-rose-200/80 rounded-2xl flex items-center justify-between gap-3 group hover:bg-rose-100/80 transition-all shadow-xs">
+                            <div class="flex items-center gap-2.5 overflow-hidden">
+                              <div class="w-9 h-9 rounded-xl bg-rose-600 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-xs">
+                                PDF
+                              </div>
+                              <div class="overflow-hidden">
+                                <div class="text-xs font-bold text-slate-900 font-heading truncate">${pdfName}</div>
+                                <div class="text-[10px] text-slate-500 font-mono">เอกสารประกอบการเรียน</div>
+                              </div>
+                            </div>
+                            <div class="flex items-center gap-1 shrink-0">
+                              <button type="button" data-view-pdf="${pdfUrl}" data-pdf-title="${pdfName}" class="btn-primary text-xs px-3 py-1.5 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 font-heading shadow-xs">
+                                👁️ อ่าน PDF
+                              </button>
+                            </div>
                           </div>
                         `;
                       }).join('')}
@@ -288,6 +322,14 @@ export class HomeworkModule {
           imageUrl: imgUrl,
           title: `🖼️ รูปภาพประกอบโจทย์การบ้าน`
         });
+      });
+    });
+
+    containerEl.querySelectorAll('[data-view-pdf]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const pdfUrl = e.currentTarget.dataset.viewPdf;
+        const title = e.currentTarget.dataset.pdfTitle;
+        showPDFPreviewModal({ pdfUrl, title });
       });
     });
 
@@ -570,6 +612,10 @@ export class HomeworkModule {
       ? (Array.isArray(targetHw.youtubeVideos) ? [...targetHw.youtubeVideos] : (targetHw.youtubeUrl ? [targetHw.youtubeUrl] : []))
       : [];
 
+    let attachedPdfs = isEdit && targetHw 
+      ? (Array.isArray(targetHw.pdfFiles) ? [...targetHw.pdfFiles] : (targetHw.pdfFile ? [targetHw.pdfFile] : []))
+      : [];
+
     const modalHTML = `
       <div id="hw-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
         <div class="glass-card w-full max-w-xl p-6 md:p-8 rounded-3xl shadow-xl relative border border-slate-200 bg-white max-h-[90vh] overflow-y-auto">
@@ -622,6 +668,31 @@ export class HomeworkModule {
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">คำอธิบายและโจทย์</label>
               <textarea id="hw-detail" rows="4" required class="input-field" placeholder="ระบุรายละเอียดโจทย์ขั้นตอนการทำ...">${isEdit ? decodeMojibakeThai(targetHw.detail) : ''}</textarea>
+            </div>
+
+            <!-- Multiple PDF Documents Attachment Section -->
+            <div class="p-4 bg-rose-50/40 border border-rose-200/80 rounded-2xl space-y-3">
+              <label class="block text-xs font-bold text-slate-800 flex items-center justify-between">
+                <span class="flex items-center gap-1.5 text-rose-800 font-heading">📄 แนบไฟล์เอกสาร PDF ประกอบการเรียน (แนบได้หลายไฟล์)</span>
+                <span class="text-[11px] font-normal text-slate-500" id="pdf-count-badge">0 ไฟล์</span>
+              </label>
+
+              <!-- PDF List Preview -->
+              <div id="hw-attached-pdf-list" class="space-y-2"></div>
+
+              <!-- Animated PDF Upload Status Indicator -->
+              <div id="hw-pdf-upload-status" class="hidden text-[11px] font-bold p-2.5 rounded-xl border transition-all text-center font-heading"></div>
+
+              <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                <label class="btn-secondary text-xs px-3 py-2 rounded-xl font-heading font-bold cursor-pointer flex items-center justify-center gap-1 shrink-0 border-rose-200 hover:bg-rose-50 text-rose-700">
+                  <span>📄 เลือกไฟล์ PDF จากเครื่อง</span>
+                  <input type="file" id="hw-pdf-file-input" accept="application/pdf,.pdf" class="hidden" multiple>
+                </label>
+                <div class="flex items-center gap-1.5 flex-1">
+                  <input type="url" id="hw-pdf-url-input" class="input-field py-1.5 text-xs border-rose-200" placeholder="วาง URL เอกสาร PDF (เช่น https://.../file.pdf)">
+                  <button type="button" id="btn-add-pdf-url" class="btn-primary text-xs px-3 py-2 rounded-xl font-bold whitespace-nowrap bg-rose-600 hover:bg-rose-700 font-heading">➕ เพิ่ม PDF</button>
+                </div>
+              </div>
             </div>
 
             <!-- Multiple Images Attachment Section -->
@@ -769,8 +840,116 @@ export class HomeworkModule {
       }
     };
 
+    const renderAttachedPdfs = () => {
+      const list = modalEl.querySelector('#hw-attached-pdf-list');
+      const badge = modalEl.querySelector('#pdf-count-badge');
+      if (badge) badge.textContent = `${attachedPdfs.length} ไฟล์`;
+
+      if (list) {
+        list.innerHTML = attachedPdfs.length === 0 ? `
+          <div class="text-center py-2 text-slate-400 text-xs italic font-heading">ยังไม่มีไฟล์ PDF ที่แนบ</div>
+        ` : attachedPdfs.map((pdf, idx) => {
+          const pdfUrl = typeof pdf === 'string' ? pdf : pdf.url;
+          const pdfName = typeof pdf === 'object' && pdf.name ? pdf.name : `เอกสาร_PDF_${idx + 1}.pdf`;
+          return `
+            <div class="flex items-center justify-between p-2.5 bg-white rounded-2xl border border-rose-200 text-xs gap-2 shadow-xs">
+              <div class="flex items-center gap-2 overflow-hidden">
+                <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                  PDF
+                </div>
+                <div class="overflow-hidden">
+                  <div class="font-bold text-slate-900 truncate text-xs font-heading">${pdfName}</div>
+                  <div class="text-[10px] text-slate-500 font-mono truncate">${pdfUrl}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button type="button" data-view-pdf="${pdfUrl}" data-pdf-title="${pdfName}" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold px-2 py-1 bg-indigo-50 hover:bg-indigo-100 rounded-lg">
+                  👁️ ดูเอกสาร
+                </button>
+                <button type="button" data-remove-pdf="${idx}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2 py-1 bg-rose-50 hover:bg-rose-100 rounded-lg">
+                  🗑️ ลบ
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        list.querySelectorAll('[data-remove-pdf]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const idx = parseInt(e.currentTarget.dataset.removePdf, 10);
+            attachedPdfs.splice(idx, 1);
+            renderAttachedPdfs();
+          });
+        });
+
+        list.querySelectorAll('[data-view-pdf]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const pdfUrl = e.currentTarget.dataset.viewPdf;
+            const title = e.currentTarget.dataset.pdfTitle;
+            showPDFPreviewModal({ pdfUrl, title });
+          });
+        });
+      }
+    };
+
     renderAttachedImgs();
     renderAttachedYt();
+    renderAttachedPdfs();
+
+    // PDF Upload Event Handlers with Status Indicator
+    const pdfUploadStatus = modalEl.querySelector('#hw-pdf-upload-status');
+
+    modalEl.querySelector('#hw-pdf-file-input')?.addEventListener('change', async (e) => {
+      if (e.target.files.length > 0) {
+        if (pdfUploadStatus) {
+          pdfUploadStatus.className = 'text-[11px] font-bold p-2.5 rounded-xl border bg-amber-50 text-amber-800 border-amber-200 animate-pulse text-center block';
+          pdfUploadStatus.innerHTML = `⏳ กำลังประมวลผลและอ่านไฟล์ PDF...`;
+        }
+
+        for (let file of e.target.files) {
+          if (pdfUploadStatus) {
+            pdfUploadStatus.innerHTML = `⏳ กำลังแนบไฟล์ <strong>${file.name}</strong>...`;
+          }
+          const reader = new FileReader();
+          await new Promise((resolve) => {
+            reader.onload = (ev) => {
+              attachedPdfs.push({
+                name: file.name,
+                url: ev.target.result
+              });
+              resolve();
+            };
+            reader.readAsDataURL(file);
+          });
+        }
+
+        renderAttachedPdfs();
+        if (pdfUploadStatus) {
+          pdfUploadStatus.className = 'text-[11px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-center block';
+          pdfUploadStatus.innerHTML = `✅ แนบไฟล์ PDF สำเร็จแล้ว! (รวม ${attachedPdfs.length} ไฟล์)`;
+          setTimeout(() => pdfUploadStatus.classList.add('hidden'), 3500);
+        }
+      }
+    });
+
+    modalEl.querySelector('#btn-add-pdf-url')?.addEventListener('click', () => {
+      const urlInput = modalEl.querySelector('#hw-pdf-url-input');
+      const val = urlInput ? urlInput.value.trim() : '';
+      if (val) {
+        const filename = val.substring(val.lastIndexOf('/') + 1) || 'เอกสาร_PDF.pdf';
+        attachedPdfs.push({
+          name: decodeURIComponent(filename),
+          url: val
+        });
+        urlInput.value = '';
+        renderAttachedPdfs();
+        if (pdfUploadStatus) {
+          pdfUploadStatus.className = 'text-[11px] font-bold p-2.5 rounded-xl border bg-emerald-50 text-emerald-800 border-emerald-200 text-center block';
+          pdfUploadStatus.innerHTML = `✅ เพิ่ม URL เอกสาร PDF สำเร็จ! (รวม ${attachedPdfs.length} ไฟล์)`;
+          setTimeout(() => pdfUploadStatus.classList.add('hidden'), 3000);
+        }
+      }
+    });
 
     // Image Upload Event Handlers with Animated Status Message
     const imgUploadStatus = modalEl.querySelector('#hw-img-upload-status');
@@ -905,7 +1084,8 @@ export class HomeworkModule {
           targetGrade: document.getElementById('hw-target-grade').value,
           targetRooms: selectedRooms,
           images: attachedImages,
-          youtubeVideos: attachedVideos
+          youtubeVideos: attachedVideos,
+          pdfFiles: attachedPdfs
         };
         firebaseService.updateItem('homework', targetHw.id, updates);
       } else {
@@ -920,6 +1100,7 @@ export class HomeworkModule {
           targetRooms: selectedRooms,
           images: attachedImages,
           youtubeVideos: attachedVideos,
+          pdfFiles: attachedPdfs,
           submissions: []
         };
         firebaseService.addItem('homework', payload);
@@ -938,6 +1119,7 @@ export class HomeworkModule {
 
     const attachmentsImages = Array.isArray(hw.images) ? hw.images : (hw.imageUrl ? [hw.imageUrl] : []);
     const attachmentsVideos = Array.isArray(hw.youtubeVideos) ? hw.youtubeVideos : (hw.youtubeUrl ? [hw.youtubeUrl] : []);
+    const attachmentsPdfs = Array.isArray(hw.pdfFiles) ? hw.pdfFiles : (hw.pdfFile ? [hw.pdfFile] : []);
 
     const modalHTML = `
       <div id="sub-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
@@ -1014,6 +1196,37 @@ export class HomeworkModule {
                 </div>
               </div>
             ` : ''}
+
+            <!-- Embedded PDF Document Attachments -->
+            ${attachmentsPdfs.length > 0 ? `
+              <div class="pt-2 border-t border-indigo-100/60 space-y-2">
+                <div class="text-xs font-bold text-rose-900 flex items-center gap-1 font-heading">
+                  <span>📄 เอกสาร PDF ประกอบการเรียน (${attachmentsPdfs.length} ไฟล์):</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  ${attachmentsPdfs.map((pdf, pIdx) => {
+                    const pdfUrl = typeof pdf === 'string' ? pdf : pdf.url;
+                    const pdfName = typeof pdf === 'object' && pdf.name ? pdf.name : `เอกสารประกอบการเรียน_${pIdx + 1}.pdf`;
+                    return `
+                      <div class="p-2.5 bg-white border border-rose-200/80 rounded-2xl flex items-center justify-between gap-2 shadow-xs">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                          <div class="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-[10px] shrink-0">
+                            PDF
+                          </div>
+                          <div class="overflow-hidden">
+                            <div class="text-xs font-bold text-slate-900 font-heading truncate">${pdfName}</div>
+                            <div class="text-[10px] text-slate-500 font-mono">เอกสารประกอบการเรียน</div>
+                          </div>
+                        </div>
+                        <button type="button" data-view-pdf="${pdfUrl}" data-pdf-title="${pdfName}" class="btn-primary text-xs px-2.5 py-1 rounded-xl font-bold bg-rose-600 hover:bg-rose-700 font-heading shrink-0">
+                          👁️ อ่าน PDF
+                        </button>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
           </div>
 
           <form id="sub-form" class="space-y-4 mt-4">
@@ -1077,6 +1290,14 @@ export class HomeworkModule {
           imageUrl: imgUrl,
           title: `🖼️ รูปภาพประกอบโจทย์การบ้าน`
         });
+      });
+    });
+
+    modalEl.querySelectorAll('[data-view-pdf]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const pdfUrl = e.currentTarget.dataset.viewPdf;
+        const title = e.currentTarget.dataset.pdfTitle;
+        showPDFPreviewModal({ pdfUrl, title });
       });
     });
 
