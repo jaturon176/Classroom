@@ -116,13 +116,10 @@ class FirebaseRealtimeService {
     if (!this.db) return;
     try {
       const sentinelRef = ref(this.db, '_system_seeded');
-      const checkPromise = get(sentinelRef);
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Sentinel check timeout')), 3000));
-      
-      const snapshot = await Promise.race([checkPromise, timeoutPromise]);
+      const snapshot = await get(sentinelRef);
 
       // If system has ALREADY been seeded once, NEVER re-seed deleted items!
-      if (snapshot && snapshot.exists() && snapshot.val() === true) {
+      if (snapshot.exists() && snapshot.val() === true) {
         return;
       }
 

@@ -4,9 +4,9 @@
  * Overview KPI cards, Announcements CRUD, and Quick Shortcuts.
  */
 
-import { firebaseService } from '../services/firebaseService.js';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal } from '../services/dialogService.js';
+import { firebaseService } from '../services/firebaseService.js?v=2.5';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=2.5';
+import { showConfirmModal } from '../services/dialogService.js?v=2.5';
 
 export class DashboardModule {
   constructor(rbac, navigateToTab, settingsModule) {

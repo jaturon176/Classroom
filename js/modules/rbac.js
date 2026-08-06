@@ -5,10 +5,10 @@
  * Personal Password Change Modal, and Profile Picture Avatar Management for ALL users.
  */
 
-import { firebaseService } from '../services/firebaseService.js';
-import { INITIAL_USERS } from '../services/sampleDataService.js';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
+import { firebaseService } from '../services/firebaseService.js?v=3.1';
+import { INITIAL_USERS } from '../services/sampleDataService.js?v=3.1';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=3.1';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=3.1';
 
 export const AVATAR_PRESETS = ['🎓', '👨‍🎓', '👩‍🎓', '👨‍🏫', '👩‍🏫', '👑', '⚡', '🚀', '🦊', '🦁', '🦉', '🎨'];
 
