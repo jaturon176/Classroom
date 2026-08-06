@@ -1386,7 +1386,7 @@ export class HomeworkModule {
     const allHw = firebaseService.getCollection('homework');
     const hw = allHw.find(h => h.id === targetHw.id) || targetHw;
     
-    const rawSubs = hw.submissions || [];
+    const rawSubs = hw.submissions || {};
     let submissions = Array.isArray(rawSubs) ? [...rawSubs] : Object.values(rawSubs);
     submissions = submissions.filter(s => s && typeof s === 'object');
 
@@ -1406,77 +1406,115 @@ export class HomeworkModule {
             <button id="close-grade-modal" class="text-slate-400 hover:text-slate-600 text-xl font-bold">✕</button>
           </div>
 
-          <!-- Submission Summary Bar -->
-          <div class="mt-4 p-3.5 bg-indigo-50/80 border border-indigo-100 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs font-heading">
-            <span class="font-bold text-indigo-900 flex items-center gap-1.5">
-              <span>📊 จำนวนงานที่นักเรียนส่งมาทั้งหมด:</span>
-              <strong class="text-indigo-600 text-sm font-extrabold">${submissions.length} คน</strong>
-            </span>
-            <div class="flex items-center gap-2">
-              <span class="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">⏳ รอตรวจ ${pendingCount} คน</span>
-              <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">✅ ตรวจแล้ว ${gradedCount} คน</span>
+          <!-- Submission Summary & Search Controls Bar -->
+          <div class="mt-4 p-4 bg-indigo-50/80 border border-indigo-100 rounded-2xl space-y-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 text-xs font-heading">
+              <span class="font-bold text-indigo-900 flex items-center gap-1.5">
+                <span>📊 จำนวนงานที่นักเรียนส่งมาทั้งหมด:</span>
+                <strong class="text-indigo-600 text-sm font-extrabold">${submissions.length} คน</strong>
+              </span>
+              <div class="flex items-center gap-2">
+                <span class="bg-amber-100 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full font-bold">⏳ รอตรวจ ${pendingCount} คน</span>
+                <span class="bg-emerald-100 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-full font-bold">✅ ตรวจแล้ว ${gradedCount} คน</span>
+              </div>
+            </div>
+
+            <!-- Search & Accordion Controls -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 pt-1">
+              <div class="w-full sm:w-72">
+                <input type="text" id="sub-search-input" class="input-field py-1.5 text-xs" placeholder="🔍 พิมพ์ชื่อ หรือ รหัสนักเรียนเพื่อค้นหา...">
+              </div>
+              <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button type="button" id="btn-expand-all-subs" class="btn-secondary text-[11px] px-3 py-1.5 rounded-xl font-bold font-heading bg-white border border-slate-200 text-slate-700 hover:bg-slate-100">
+                  📂 ขยายทั้งหมด
+                </button>
+                <button type="button" id="btn-collapse-all-subs" class="btn-secondary text-[11px] px-3 py-1.5 rounded-xl font-bold font-heading bg-white border border-slate-200 text-slate-700 hover:bg-slate-100">
+                  📁 พับทั้งหมด
+                </button>
+              </div>
             </div>
           </div>
 
-          <div class="space-y-6 mt-4">
+          <!-- Student Roster List -->
+          <div id="sub-roster-list" class="space-y-3 mt-4">
             ${submissions.length === 0 ? `
               <div class="text-center py-12 text-slate-400 text-sm font-heading">ยังไม่มีนักเรียนส่งงานในหัวข้อนี้</div>
             ` : submissions.map((sub, idx) => `
-              <div class="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 relative group">
-                <div class="flex justify-between items-start gap-2 border-b border-slate-200/60 pb-2">
-                  <div class="flex items-center gap-2">
-                    <span class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs font-heading">
+              <div class="rounded-2xl bg-white border border-slate-200/90 overflow-hidden shadow-xs transition-all hover:border-indigo-300 sub-card-item" data-sub-card="${sub.studentId}" data-student-name="${decodeMojibakeThai(sub.studentName)}" data-student-id="${sub.studentId}">
+                
+                <!-- Compact Clickable Student Header Row -->
+                <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-50/80 transition-colors border-b border-transparent btn-toggle-sub" data-toggle-sub="${sub.studentId}">
+                  <div class="flex items-center gap-3 overflow-hidden">
+                    <span class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 flex items-center justify-center font-bold text-xs font-heading shrink-0">
                       ${idx + 1}
                     </span>
-                    <div>
-                      <div class="font-bold text-slate-900 text-sm font-heading">${decodeMojibakeThai(sub.studentName)}</div>
-                      <div class="text-[10px] text-slate-400 font-mono">รหัส: ${sub.studentId} • ส่งเมื่อ: ${sub.submittedAt}</div>
+                    <div class="overflow-hidden">
+                      <div class="font-bold text-slate-900 text-sm font-heading truncate flex items-center gap-2">
+                        <span>${decodeMojibakeThai(sub.studentName)}</span>
+                        <span class="text-[11px] text-slate-400 font-mono font-semibold">(${sub.studentId})</span>
+                      </div>
+                      <div class="text-[11px] text-slate-500 font-heading truncate">
+                        📅 ส่งเมื่อ: ${sub.submittedAt}
+                      </div>
                     </div>
                   </div>
 
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2 shrink-0">
                     <span class="px-2.5 py-1 rounded-full text-xs font-bold font-heading ${
                       sub.status === 'Graded' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                     }">
-                      ${sub.status === 'Graded' ? `ตรวจแล้ว (${sub.score}/${hw.maxPoints})` : 'รอการตรวจ'}
+                      ${sub.status === 'Graded' ? `✅ ตรวจแล้ว (${sub.score}/${hw.maxPoints})` : '⏳ รอตรวจ'}
                     </span>
 
-                    <button type="button" data-del-sub="${sub.studentId}" data-student-name="${decodeMojibakeThai(sub.studentName)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2 py-1 hover:bg-rose-50 rounded-lg transition-all font-heading" title="ลบงานชิ้นนี้">
-                      🗑️ ลบงาน
+                    <button type="button" class="btn-secondary text-xs px-3 py-1.5 rounded-xl font-bold font-heading flex items-center gap-1 bg-slate-100 hover:bg-indigo-50 text-indigo-700 border-slate-200">
+                      <span class="sub-toggle-icon">▼</span>
+                      <span class="sub-toggle-text hidden sm:inline">ดูงาน</span>
                     </button>
                   </div>
                 </div>
 
-                <div class="space-y-2 text-xs">
-                  <div>
-                    <span class="font-semibold text-slate-700 font-heading">ข้อความคำตอบนักเรียน:</span>
-                    <p class="text-slate-800 bg-white p-3 rounded-xl border border-slate-200 mt-1 whitespace-pre-line font-sans">${decodeMojibakeThai(sub.textResponse || 'ไม่ได้พิมพ์ข้อความเพิ่มเติม')}</p>
+                <!-- Expanded Detailed Panel (Hidden by Default) -->
+                <div class="sub-detail-panel hidden p-4 sm:p-5 bg-slate-50/90 border-t border-slate-200/80 space-y-4">
+                  <div class="flex justify-between items-center pb-2 border-b border-slate-200/60">
+                    <div class="text-xs font-bold text-slate-700 font-heading">
+                      📌 รายละเอียดคำตอบของ ${decodeMojibakeThai(sub.studentName)}
+                    </div>
+                    <button type="button" data-del-sub="${sub.studentId}" data-student-name="${decodeMojibakeThai(sub.studentName)}" class="text-rose-600 hover:text-rose-800 text-xs font-bold px-2.5 py-1 hover:bg-rose-50 rounded-lg transition-all font-heading" title="ลบงานชิ้นนี้">
+                      🗑️ ลบงานชิ้นนี้
+                    </button>
                   </div>
 
-                  ${sub.imageFile ? `
-                    <div class="pt-2 border-t border-slate-100">
-                      <div class="font-bold text-slate-700 mb-1.5 flex items-center justify-between font-heading">
-                        <span class="flex items-center gap-1">📸 รูปภาพงานที่ส่ง (Cloudinary CDN):</span>
-                        <span class="text-[11px] font-semibold text-indigo-600">🔍 คลิกรูปเพื่อดูขนาดย่อ/ขยายรูปเต็ม</span>
-                      </div>
-                      <div class="max-w-md rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900/5 relative group cursor-pointer" data-preview-img="${sub.imageFile}" data-student-name="${decodeMojibakeThai(sub.studentName)}">
-                        <img src="${sub.imageFile}" class="w-full max-h-64 object-contain group-hover:scale-105 transition-transform">
-                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-[2px] font-heading">
-                          <span class="text-base">🔍</span> คลิกเพื่อเปิดรูปภาพขนาดใหญ่
+                  <div class="space-y-3 text-xs">
+                    <div>
+                      <span class="font-semibold text-slate-700 font-heading">ข้อความคำตอบนักเรียน:</span>
+                      <p class="text-slate-800 bg-white p-3 rounded-xl border border-slate-200 mt-1 whitespace-pre-line font-sans">${decodeMojibakeThai(sub.textResponse || 'ไม่ได้พิมพ์ข้อความเพิ่มเติม')}</p>
+                    </div>
+
+                    ${sub.imageFile ? `
+                      <div class="pt-2 border-t border-slate-200/60">
+                        <div class="font-bold text-slate-700 mb-1.5 flex items-center justify-between font-heading">
+                          <span class="flex items-center gap-1">📸 รูปภาพงานที่ส่ง (Cloudinary CDN):</span>
+                          <span class="text-[11px] font-semibold text-indigo-600">🔍 คลิกรูปเพื่อดูขนาดย่อ/ขยายรูปเต็ม</span>
+                        </div>
+                        <div class="max-w-md rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900/5 relative group cursor-pointer" data-preview-img="${sub.imageFile}" data-student-name="${decodeMojibakeThai(sub.studentName)}">
+                          <img src="${sub.imageFile}" class="w-full max-h-64 object-contain group-hover:scale-105 transition-transform">
+                          <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5 backdrop-blur-[2px] font-heading">
+                            <span class="text-base">🔍</span> คลิกเพื่อเปิดรูปภาพขนาดใหญ่
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ` : ''}
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                  <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">ให้คะแนน (เต็ม ${hw.maxPoints})</label>
-                    <input type="number" max="${hw.maxPoints}" data-std-id="${sub.studentId}" class="sub-score-input input-field py-1 text-xs" value="${sub.score !== null && sub.score !== undefined ? sub.score : ''}" placeholder="ระบุคะแนน">
+                    ` : ''}
                   </div>
-                  <div>
-                    <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">คำแนะนำ / ความเห็นครู</label>
-                    <input type="text" data-std-id="${sub.studentId}" class="sub-feedback-input input-field py-1 text-xs" value="${sub.feedback || ''}" placeholder="เช่น ทำได้เยี่ยมมาก!">
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-200/60">
+                    <div>
+                      <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">ให้คะแนน (เต็ม ${hw.maxPoints})</label>
+                      <input type="number" max="${hw.maxPoints}" data-std-id="${sub.studentId}" class="sub-score-input input-field py-1.5 text-xs bg-white" value="${sub.score !== null && sub.score !== undefined ? sub.score : ''}" placeholder="ระบุคะแนน">
+                    </div>
+                    <div>
+                      <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">คำแนะนำ / ความเห็นครู</label>
+                      <input type="text" data-std-id="${sub.studentId}" class="sub-feedback-input input-field py-1.5 text-xs bg-white" value="${sub.feedback || ''}" placeholder="เช่น ทำได้เยี่ยมมาก!">
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1492,6 +1530,70 @@ export class HomeworkModule {
 
     document.body.insertAdjacentHTML('beforeend', modalHTML);
     const modalEl = document.getElementById('grade-modal');
+
+    // Toggle Accordion Detail Handler
+    modalEl.querySelectorAll('.btn-toggle-sub').forEach(header => {
+      header.addEventListener('click', (e) => {
+        const stdId = e.currentTarget.dataset.toggleSub;
+        const card = modalEl.querySelector(`[data-sub-card="${stdId}"]`);
+        if (!card) return;
+
+        const detail = card.querySelector('.sub-detail-panel');
+        const icon = card.querySelector('.sub-toggle-icon');
+        const label = card.querySelector('.sub-toggle-text');
+
+        if (detail.classList.contains('hidden')) {
+          detail.classList.remove('hidden');
+          if (icon) icon.textContent = '▲';
+          if (label) label.textContent = 'ซ่อนงาน';
+          card.classList.add('ring-2', 'ring-indigo-500/20');
+        } else {
+          detail.classList.add('hidden');
+          if (icon) icon.textContent = '▼';
+          if (label) label.textContent = 'ดูงาน';
+          card.classList.remove('ring-2', 'ring-indigo-500/20');
+        }
+      });
+    });
+
+    // Expand All / Collapse All Handlers
+    modalEl.querySelector('#btn-expand-all-subs')?.addEventListener('click', () => {
+      modalEl.querySelectorAll('.sub-card-item').forEach(card => {
+        const detail = card.querySelector('.sub-detail-panel');
+        const icon = card.querySelector('.sub-toggle-icon');
+        const label = card.querySelector('.sub-toggle-text');
+        detail.classList.remove('hidden');
+        if (icon) icon.textContent = '▲';
+        if (label) label.textContent = 'ซ่อนงาน';
+        card.classList.add('ring-2', 'ring-indigo-500/20');
+      });
+    });
+
+    modalEl.querySelector('#btn-collapse-all-subs')?.addEventListener('click', () => {
+      modalEl.querySelectorAll('.sub-card-item').forEach(card => {
+        const detail = card.querySelector('.sub-detail-panel');
+        const icon = card.querySelector('.sub-toggle-icon');
+        const label = card.querySelector('.sub-toggle-text');
+        detail.classList.add('hidden');
+        if (icon) icon.textContent = '▼';
+        if (label) label.textContent = 'ดูงาน';
+        card.classList.remove('ring-2', 'ring-indigo-500/20');
+      });
+    });
+
+    // Live Student Search Filter Handler
+    modalEl.querySelector('#sub-search-input')?.addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      modalEl.querySelectorAll('.sub-card-item').forEach(card => {
+        const name = (card.dataset.studentName || '').toLowerCase();
+        const stdId = (card.dataset.studentId || '').toLowerCase();
+        if (name.includes(q) || stdId.includes(q)) {
+          card.classList.remove('hidden');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    });
 
     // Bind Image Lightbox Modal Preview Handler
     modalEl.querySelectorAll('[data-preview-img]').forEach(box => {

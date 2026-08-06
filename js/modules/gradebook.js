@@ -14,11 +14,13 @@ export class GradebookModule {
     this.rbac = rbac;
     this.selectedGrade = 'All';
     this.selectedRoom = 'All';
+    this.selectedCourse = 'All';
     this.searchQuery = '';
   }
 
   render(containerEl) {
     const users = firebaseService.getCollection('users');
+    const courses = firebaseService.getCollection('courses') || [];
     const homeworkList = firebaseService.getCollection('homework') || [];
     const quizzes = firebaseService.getCollection('quizzes') || [];
     const currentUser = this.rbac.getCurrentUser();
@@ -37,7 +39,7 @@ export class GradebookModule {
     const availableRooms = [...new Set(gradeFilteredUsers.map(s => s.room).filter(r => r && r !== '-'))].sort();
 
     // Apply Filters (1. Grade, 2. Room, 3. Individual Search Query)
-    let filteredStudents = allStudentUsers;
+    let filteredStudents = [...allStudentUsers];
 
     if (this.selectedGrade !== 'All') {
       filteredStudents = filteredStudents.filter(s => s.grade === this.selectedGrade);
@@ -56,12 +58,32 @@ export class GradebookModule {
       );
     }
 
+    // Sort students by Student Number (no / stdNo / number) or Student ID numerically
+    filteredStudents.sort((a, b) => {
+      const noA = parseInt(a.no || a.stdNo || a.studentNo || a.number, 10) || parseInt(a.studentId, 10) || 999999;
+      const noB = parseInt(b.no || b.stdNo || b.studentNo || b.number, 10) || parseInt(b.studentId, 10) || 999999;
+      if (noA !== noB) return noA - noB;
+      return (a.studentId || '').localeCompare(b.studentId || '', undefined, { numeric: true });
+    });
+
+    // Filter Homework & Quizzes by selected Course
+    let activeHomeworkList = homeworkList;
+    let activeQuizzes = quizzes;
+
+    if (this.selectedCourse !== 'All') {
+      const targetCourseObj = courses.find(c => c.id === this.selectedCourse);
+      const targetCourseName = targetCourseObj ? targetCourseObj.name : '';
+
+      activeHomeworkList = homeworkList.filter(hw => hw.courseId === this.selectedCourse || (targetCourseName && hw.courseName === targetCourseName));
+      activeQuizzes = quizzes.filter(q => q.courseId === this.selectedCourse || (targetCourseName && q.courseName === targetCourseName));
+    }
+
     // Calculate consolidated scores per student
-    const reportData = filteredStudents.map(s => {
+    const reportData = filteredStudents.map((s, idx) => {
       let totalHwPoints = 0;
       let earnedHwPoints = 0;
 
-      homeworkList.forEach(hw => {
+      activeHomeworkList.forEach(hw => {
         totalHwPoints += (hw.maxPoints || 20);
         const rawSubs = hw.submissions || {};
         const subsList = Array.isArray(rawSubs) ? rawSubs : Object.values(rawSubs);
@@ -75,7 +97,7 @@ export class GradebookModule {
       let totalQuizPoints = 0;
       let earnedQuizPoints = 0;
 
-      quizzes.forEach(q => {
+      activeQuizzes.forEach(q => {
         const qMax = q.questions ? q.questions.reduce((sum, item) => sum + (parseInt(item.points, 10) || 1), 0) : 1;
         totalQuizPoints += qMax;
 
@@ -97,7 +119,10 @@ export class GradebookModule {
       else if (percentage >= 60) gradeLetter = '2 (C)';
       else if (percentage >= 50) gradeLetter = '1 (D)';
 
+      const stdNo = s.no || s.stdNo || s.studentNo || s.number || (idx + 1);
+
       return {
+        no: stdNo,
         studentId: s.studentId || s.username || '-',
         name: decodeMojibakeThai(s.name),
         grade: s.grade || '-',
@@ -122,7 +147,7 @@ export class GradebookModule {
               <span class="p-2.5 bg-purple-50 text-purple-600 rounded-2xl border border-purple-100 text-xl">📊</span>
               สมุดเก็บคะแนนและรายงาน (Gradebook & Reports)
             </h2>
-            <p class="text-slate-500 text-xs mt-1">รวบรวมคะแนนการบ้าน + แบบทดสอบ, คัดกรองรายบุคคล รายห้อง รายชั้น และส่งออกไฟล์ PDF/Excel</p>
+            <p class="text-slate-500 text-xs mt-1">รวบรวมคะแนนการบ้าน + แบบทดสอบ, คัดกรองรายวิชา รายชั้น รายห้อง และส่งออกไฟล์ PDF/Excel เรียงตามเลขที่</p>
           </div>
 
           <div class="flex flex-wrap gap-3">
@@ -135,7 +160,7 @@ export class GradebookModule {
           </div>
         </div>
 
-        <!-- Filter Controls Bar (คัดกรอง รายบุคคล / รายห้อง / รายชั้น) -->
+        <!-- Filter Controls Bar (คัดกรอง รายวิชา / รายชั้น / รายห้อง / รายบุคคล) -->
         <div class="glass-card p-6 rounded-3xl shadow-sm bg-white border border-slate-200 space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-base font-bold text-slate-900 font-heading flex items-center gap-2">
@@ -145,18 +170,31 @@ export class GradebookModule {
             <span class="text-xs text-slate-500 font-medium">พบทั้งหมด <strong class="text-indigo-600 font-bold">${reportData.length}</strong> รายชื่อ</span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <!-- 1. ค้นหารายบุคคล -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
-                <span>👤</span> ค้นหารายบุคคล (ชื่อ / รหัสนักเรียน)
+              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1 font-heading">
+                <span>👤</span> ค้นหารายบุคคล (ชื่อ / รหัส)
               </label>
               <input type="text" id="filter-search" value="${this.searchQuery}" class="input-field py-2 text-xs" placeholder="พิมพ์ชื่อ หรือ รหัสนักเรียนเพื่อค้นหา...">
             </div>
 
-            <!-- 2. คัดกรองรายชั้น -->
+            <!-- 2. คัดกรองรายวิชา (Course) -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1 font-heading">
+                <span>📚</span> เลือกรายวิชา (Course)
+              </label>
+              <select id="filter-course" class="input-field py-2 text-xs">
+                <option value="All" ${this.selectedCourse === 'All' ? 'selected' : ''}>🌐 ทุกรายวิชา (All Courses)</option>
+                ${courses.map(c => `
+                  <option value="${c.id}" ${this.selectedCourse === c.id ? 'selected' : ''}>📚 ${decodeMojibakeThai(c.name)} (${c.code || '-'})</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- 3. คัดกรองรายชั้น -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1 font-heading">
                 <span>🏫</span> เลือกรายชั้น (Grade)
               </label>
               <select id="filter-grade" class="input-field py-2 text-xs">
@@ -167,9 +205,9 @@ export class GradebookModule {
               </select>
             </div>
 
-            <!-- 3. คัดกรองรายห้อง -->
+            <!-- 4. คัดกรองรายห้อง -->
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1">
+              <label class="block text-xs font-bold text-slate-700 mb-1 flex items-center gap-1 font-heading">
                 <span>🚪</span> เลือกรายห้อง (Room)
               </label>
               <select id="filter-room" class="input-field py-2 text-xs">
@@ -231,12 +269,13 @@ export class GradebookModule {
           </div>
         </div>
 
-        <!-- Gradebook Consolidated Matrix Table -->
+        <!-- Gradebook Consolidated Matrix Table (Sorted by Student Number / เลขที่) -->
         <div class="glass-card rounded-3xl overflow-hidden shadow-sm bg-white border border-slate-200">
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
               <thead>
                 <tr class="bg-slate-50 text-slate-700 text-xs font-heading font-bold uppercase tracking-wider border-b border-slate-200">
+                  <th class="p-4 text-center whitespace-nowrap">เลขที่</th>
                   <th class="p-4 whitespace-nowrap">รหัสนักเรียน</th>
                   <th class="p-4 whitespace-nowrap">ชื่อ-นามสกุล</th>
                   <th class="p-4 text-center whitespace-nowrap">ระดับชั้น/ห้อง</th>
@@ -249,9 +288,10 @@ export class GradebookModule {
               </thead>
               <tbody class="divide-y divide-slate-100 text-xs sm:text-sm">
                 ${reportData.length === 0 ? `
-                  <tr><td colspan="8" class="text-center py-10 text-slate-400">ไม่พบข้อมูลคะแนนตามเงื่อนไขการค้นหาที่เลือก</td></tr>
+                  <tr><td colspan="9" class="text-center py-10 text-slate-400">ไม่พบข้อมูลคะแนนตามเงื่อนไขการค้นหาที่เลือก</td></tr>
                 ` : reportData.map(r => `
                   <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="p-4 text-center font-bold text-slate-600 font-mono whitespace-nowrap">${r.no}</td>
                     <td class="p-4 font-mono font-bold text-indigo-600 whitespace-nowrap">${r.studentId}</td>
                     <td class="p-4 font-bold text-slate-900 whitespace-nowrap">${r.name}</td>
                     <td class="p-4 text-center whitespace-nowrap">
@@ -281,8 +321,9 @@ export class GradebookModule {
       </div>
     `;
 
-    // Filter Controls Handlers (Individual Search, Grade Filter, Room Filter)
+    // Filter Controls Handlers (Individual Search, Course Filter, Grade Filter, Room Filter)
     const searchInput = containerEl.querySelector('#filter-search');
+    const courseSelect = containerEl.querySelector('#filter-course');
     const gradeSelect = containerEl.querySelector('#filter-grade');
     const roomSelect = containerEl.querySelector('#filter-room');
 
@@ -296,6 +337,11 @@ export class GradebookModule {
         newSearch.focus();
         newSearch.setSelectionRange(newSearch.value.length, newSearch.value.length);
       }
+    });
+
+    courseSelect?.addEventListener('change', (e) => {
+      this.selectedCourse = e.target.value;
+      this.render(containerEl);
     });
 
     gradeSelect?.addEventListener('change', (e) => {
@@ -312,6 +358,7 @@ export class GradebookModule {
     // Action Handlers for Export
     containerEl.querySelector('#btn-export-excel')?.addEventListener('click', () => {
       const exportRows = reportData.map(r => ({
+        'เลขที่': r.no,
         'รหัสนักเรียน': r.studentId,
         'ชื่อ-นามสกุล': r.name,
         'ระดับชั้น': r.grade,
@@ -323,12 +370,17 @@ export class GradebookModule {
         'ร้อยละ (%)': `${r.percentage}%`,
         'เกรด': r.gradeLetter
       }));
-      exportToCSV(`Gradebook_${this.selectedGrade}_Room${this.selectedRoom}.csv`, exportRows);
+      const selectedCourseName = this.selectedCourse !== 'All' ? (courses.find(c => c.id === this.selectedCourse)?.name || '') : 'ทุกรายวิชา';
+      exportToCSV(`Gradebook_${selectedCourseName}_Grade${this.selectedGrade}_Room${this.selectedRoom}.csv`, exportRows);
     });
 
     containerEl.querySelector('#btn-export-pdf')?.addEventListener('click', () => {
-      const headers = ['รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ชั้น/ห้อง', 'คะแนนการบ้าน', 'คะแนนแบบทดสอบ', 'คะแนนรวม', '%', 'เกรด'];
+      const selectedCourseObj = courses.find(c => c.id === this.selectedCourse);
+      const selectedCourseTitle = selectedCourseObj ? decodeMojibakeThai(selectedCourseObj.name) : 'ทุกรายวิชา';
+
+      const headers = ['เลขที่', 'รหัสนักเรียน', 'ชื่อ-นามสกุล', 'ชั้น/ห้อง', 'คะแนนการบ้าน', 'คะแนนแบบทดสอบ', 'คะแนนรวม', '%', 'เกรด'];
       const dataRows = reportData.map(r => [
+        r.no,
         r.studentId,
         r.name,
         `${r.grade}/${r.room}`,
@@ -340,8 +392,8 @@ export class GradebookModule {
       ]);
 
       printPDFReport(
-        `ใบสรุปรายงานผลคะแนนนักเรียน (${this.selectedGrade === 'All' ? 'ทุกระดับชั้น' : this.selectedGrade} ${this.selectedRoom === 'All' ? 'ทุกห้อง' : 'ห้อง ' + this.selectedRoom})`,
-        `ประจำปีการศึกษา 2026 - รวมคะแนนการบ้านและแบบทดสอบออนไลน์`,
+        `ใบสรุปรายงานผลคะแนนนักเรียน (${selectedCourseTitle} - ${this.selectedGrade === 'All' ? 'ทุกระดับชั้น' : this.selectedGrade} ${this.selectedRoom === 'All' ? 'ทุกห้อง' : 'ห้อง ' + this.selectedRoom})`,
+        `ประจำปีการศึกษา 2026 - รวมคะแนนการบ้านและแบบทดสอบออนไลน์ (เรียงตามเลขที่รายชื่อ)`,
         headers,
         dataRows
       );
