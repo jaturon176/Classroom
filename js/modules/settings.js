@@ -1,7 +1,8 @@
 /**
  * System Settings Module
- * Manages school info, banner titles, rich background theme presets (10+ presets + Custom Color Picker),
- * and comprehensive system-wide preferences (sound effects, digital clock, page sizes, permissions).
+ * Manages school info, school logo image upload & presets, banner titles,
+ * rich background theme presets (10+ presets + Custom Color Picker),
+ * and comprehensive system-wide preferences.
  */
 
 import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
@@ -29,45 +30,30 @@ export class SettingsModule {
 
   initSettings() {
     const raw = localStorage.getItem('antigravity_school_settings');
+    const defaultSettings = {
+      schoolName: 'โรงเรียนพนมดงรักวิทยา',
+      schoolLogo: '⚡',
+      academicYear: '2026',
+      semester: 'ภาคเรียนที่ 1',
+      theme: 'ocean',
+      customBgColor: '',
+      bannerTitle: 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่',
+      showClock: true,
+      pageSize: 10,
+      allowStudentAvatar: true
+    };
+
     if (!raw) {
-      this.settings = {
-        schoolName: 'โรงเรียนพนมดงรักวิทยา',
-        academicYear: '2026',
-        semester: 'ภาคเรียนที่ 1',
-        theme: 'ocean',
-        customBgColor: '',
-        bannerTitle: 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่',
-        showClock: true,
-        pageSize: 10,
-        allowStudentAvatar: true
-      };
+      this.settings = defaultSettings;
       this.saveSettings();
     } else {
       try {
         this.settings = {
-          schoolName: 'โรงเรียนพนมดงรักวิทยา',
-          academicYear: '2026',
-          semester: 'ภาคเรียนที่ 1',
-          theme: 'ocean',
-          customBgColor: '',
-          bannerTitle: 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่',
-          showClock: true,
-          pageSize: 10,
-          allowStudentAvatar: true,
+          ...defaultSettings,
           ...JSON.parse(raw)
         };
       } catch (e) {
-        this.settings = {
-          schoolName: 'โรงเรียนพนมดงรักวิทยา',
-          academicYear: '2026',
-          semester: 'ภาคเรียนที่ 1',
-          theme: 'ocean',
-          customBgColor: '',
-          bannerTitle: 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่',
-          showClock: true,
-          pageSize: 10,
-          allowStudentAvatar: true
-        };
+        this.settings = defaultSettings;
       }
     }
     this.applyTheme();
@@ -109,20 +95,65 @@ export class SettingsModule {
               <span class="p-2.5 bg-sky-50 text-sky-600 rounded-2xl border border-sky-100 text-xl">⚙️</span>
               ตั้งค่าระบบและธีมพื้นหลัง (System Settings & Customization)
             </h2>
-            <p class="text-slate-500 text-xs mt-1">กำหนดชื่อโรงเรียน, เลือกธีมสีพื้นหลัง 10+ แบบ + เลือกสีเองได้, และตั้งค่าการทำงานแอปพลิเคชัน</p>
+            <p class="text-slate-500 text-xs mt-1">กำหนดชื่อและโลโก้โรงเรียน, เลือกธีมสีพื้นหลัง 10+ แบบ + เลือกสีเองได้, และตั้งค่าการทำงานแอปพลิเคชัน</p>
           </div>
         </div>
 
-        <!-- Section 1: School Profile Settings -->
+        <!-- Section 1: School Profile & Logo Settings -->
         <div class="glass-card p-6 md:p-8 rounded-3xl shadow-sm bg-white border border-slate-200 space-y-6">
           <h3 class="text-lg font-bold font-heading text-slate-900 pb-3 border-b border-slate-100 flex items-center gap-2">
-            <span>🏫</span> 1. ข้อมูลสถานศึกษาและแบนเนอร์
+            <span>🏫</span> 1. ข้อมูลสถานศึกษาและโลโก้โรงเรียน (School Profile & Emblem)
           </h3>
 
-          <form id="settings-school-form" class="space-y-4">
+          <form id="settings-school-form" class="space-y-5">
             <div>
-              <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อสถานศึกษา / โรงเรียน</label>
+              <label class="block text-xs font-bold text-slate-700 mb-1">ชื่อสถานศึกษา / โรงเรียน <span class="text-rose-500">*</span></label>
               <input type="text" id="set-school-name" value="${decodeMojibakeThai(this.settings.schoolName)}" required class="input-field" placeholder="โรงเรียนพนมดงรักวิทยา">
+            </div>
+
+            <!-- School Logo Customization Field -->
+            <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-4">
+              <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <span>🖼️</span> โลโก้/ตราสัญลักษณ์โรงเรียน (School Logo & Emblem)
+              </label>
+
+              <div class="flex flex-col sm:flex-row items-center gap-4">
+                <!-- Live Header Logo Preview -->
+                <div class="flex flex-col items-center gap-1 shrink-0">
+                  <div class="text-[10px] font-bold text-slate-500">ตัวอย่างบนแถบเมนู</div>
+                  <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-extrabold shadow-sm shadow-indigo-500/20 overflow-hidden border border-white" id="logo-preview-box">
+                    ${this.settings.schoolLogo && (this.settings.schoolLogo.startsWith('http') || this.settings.schoolLogo.startsWith('data:image')) 
+                      ? `<img src="${this.settings.schoolLogo}" class="w-full h-full object-cover">` 
+                      : `<span>${this.settings.schoolLogo || '⚡'}</span>`}
+                  </div>
+                </div>
+
+                <div class="space-y-3 flex-1 w-full">
+                  <!-- Preset Icon Choice -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">1. เลือกสัญลักษณ์สำเร็จรูป</label>
+                    <div class="flex flex-wrap gap-1.5">
+                      ${['⚡', '🎓', '🏫', '🏛️', '📚', '👑', '🌟', '🛡️', '🦁', '🦊'].map(p => `
+                        <button type="button" data-logo-preset="${p}" class="w-8 h-8 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 text-sm flex items-center justify-center hover:scale-105 transition-all">
+                          ${p}
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <!-- Image File Upload -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">2. หรืออัปโหลดไฟล์ตราโรงเรียน (.png, .jpg, .svg)</label>
+                    <input type="file" id="set-logo-file" accept="image/*" class="input-field py-1 text-xs">
+                  </div>
+
+                  <!-- Image URL Input -->
+                  <div>
+                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">3. หรือวางลิงก์รูปภาพโลโก้ (Image URL)</label>
+                    <input type="url" id="set-logo-url" value="${this.settings.schoolLogo && this.settings.schoolLogo.startsWith('http') ? this.settings.schoolLogo : ''}" class="input-field py-1 text-xs" placeholder="https://domain.com/school-logo.png">
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -143,7 +174,7 @@ export class SettingsModule {
 
             <div class="flex justify-end pt-2">
               <button type="submit" class="btn-primary text-xs px-6 py-2.5 rounded-xl font-heading font-bold shadow-md">
-                💾 บันทึกข้อมูลโรงเรียน
+                💾 บันทึกข้อมูลและโลโก้โรงเรียน
               </button>
             </div>
           </form>
@@ -218,10 +249,46 @@ export class SettingsModule {
       </div>
     `;
 
+    // Interactive Logo Preview & Handlers
+    let currentSelectedLogo = this.settings.schoolLogo || '⚡';
+    const logoPreviewBox = containerEl.querySelector('#logo-preview-box');
+
+    const updateLogoPreview = (val) => {
+      currentSelectedLogo = val;
+      if (val.startsWith('http') || val.startsWith('data:image')) {
+        logoPreviewBox.innerHTML = `<img src="${val}" class="w-full h-full object-cover">`;
+      } else {
+        logoPreviewBox.innerHTML = `<span>${val}</span>`;
+      }
+    };
+
+    containerEl.querySelectorAll('[data-logo-preset]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        updateLogoPreview(e.currentTarget.dataset.logoPreset);
+      });
+    });
+
+    containerEl.querySelector('#set-logo-file')?.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          updateLogoPreview(ev.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    containerEl.querySelector('#set-logo-url')?.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      if (val) updateLogoPreview(val);
+    });
+
     // Event Handlers for School Form
     containerEl.querySelector('#settings-school-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       this.settings.schoolName = document.getElementById('set-school-name').value.trim();
+      this.settings.schoolLogo = currentSelectedLogo;
       this.settings.bannerTitle = document.getElementById('set-banner-title').value.trim();
       this.settings.academicYear = document.getElementById('set-year').value.trim();
       this.settings.semester = document.getElementById('set-semester').value.trim();
@@ -231,7 +298,7 @@ export class SettingsModule {
 
       await showAlertModal({
         title: '💾 บันทึกการตั้งค่าสำเร็จ',
-        message: 'อัปเดตข้อมูลสถานศึกษาและภาคเรียนเรียบร้อยแล้ว',
+        message: 'อัปเดตข้อมูลและโลโก้โรงเรียนเรียบร้อยแล้ว',
         type: 'success'
       });
     });

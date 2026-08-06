@@ -105,6 +105,11 @@ class SchoolApp {
     const currentUser = this.rbac.getCurrentUser();
     const settings = this.settingsModule.getSettings();
 
+    // Dynamic School Logo
+    const logoContent = settings.schoolLogo && (settings.schoolLogo.startsWith('http') || settings.schoolLogo.startsWith('data:image'))
+      ? `<img src="${settings.schoolLogo}" class="w-full h-full object-cover">`
+      : `<span>${settings.schoolLogo || '⚡'}</span>`;
+
     // Default avatar icon per role if not customized
     const defaultAvatar = currentUser.role === 'Admin' ? '👑' : currentUser.role === 'Teacher' ? '👨‍🏫' : '🎓';
     const avatarContent = currentUser.avatar && (currentUser.avatar.startsWith('http') || currentUser.avatar.startsWith('data:image'))
@@ -137,8 +142,8 @@ class SchoolApp {
           <!-- Left: Logo & School Name (Strictly Single Line, No Line Wrap) -->
           <div class="flex items-center justify-between w-full xl:w-auto shrink-0">
             <div class="flex items-center gap-2.5 cursor-pointer group" id="brand-logo">
-              <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm font-extrabold shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-                ⚡
+              <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm font-extrabold shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform overflow-hidden">
+                ${logoContent}
               </div>
               <div class="whitespace-nowrap">
                 <div class="font-heading font-extrabold text-sm text-slate-900 tracking-tight flex items-center gap-2 whitespace-nowrap">
