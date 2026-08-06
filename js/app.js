@@ -67,11 +67,11 @@ class SchoolApp {
       if (!badge) return;
 
       if (status === 'synced' || status === 'syncing') {
-        badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center gap-1.5';
-        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span> Central Server Live (0.1s)';
+        badge.className = 'px-3 py-1.5 rounded-full text-xs font-heading font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/30 flex items-center gap-2 whitespace-nowrap shadow-sm backdrop-blur-md shrink-0';
+        badge.innerHTML = '<span class="relative flex h-2.5 w-2.5 shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span></span> 🌐 Central Server Live (0.1s)';
       } else {
-        badge.className = 'px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500 border border-slate-200 flex items-center gap-1.5';
-        badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-slate-400"></span> Offline Local Cache';
+        badge.className = 'px-3 py-1.5 rounded-full text-xs font-heading font-bold bg-slate-100 text-slate-500 border border-slate-300 flex items-center gap-2 whitespace-nowrap shadow-sm shrink-0';
+        badge.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0"></span> ⚡ Offline Local Cache';
       }
     });
   }
@@ -131,38 +131,40 @@ class SchoolApp {
     }
 
     headerContainer.innerHTML = `
-      <header class="glass-nav sticky top-0 z-50 px-4 lg:px-8 py-2.5 transition-colors">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-          <!-- Logo & Brand -->
-          <div class="flex items-center justify-between w-full md:w-auto">
+      <header class="glass-nav sticky top-0 z-50 px-3 lg:px-6 py-2.5 transition-all">
+        <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-3">
+          <!-- Logo & Brand (Single Horizontal Row School Name) -->
+          <div class="flex items-center justify-between w-full lg:w-auto shrink-0">
             <div class="flex items-center gap-3 cursor-pointer group" id="brand-logo">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-lg font-extrabold shadow-md shadow-sky-500/20 group-hover:scale-105 transition-transform">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white text-xl font-extrabold shadow-md shadow-indigo-500/25 group-hover:scale-105 transition-transform shrink-0">
                 ⚡
               </div>
-              <div>
-                <div class="font-heading font-extrabold text-base tracking-tight text-slate-800 flex items-center gap-2">
-                  ${decodeMojibakeThai(settings.schoolName)} <span class="text-[10px] bg-emerald-100 text-emerald-800 border border-emerald-300 px-2 py-0.5 rounded-full font-bold">Central Server Live</span>
+              <div class="flex flex-col min-w-0">
+                <div class="font-heading font-extrabold text-base tracking-tight text-slate-900 flex items-center gap-2 whitespace-nowrap overflow-hidden text-ellipsis">
+                  ${decodeMojibakeThai(settings.schoolName)}
                 </div>
-                <div class="text-[11px] text-slate-500 font-heading">ระบบบริหารจัดการห้องเรียนอัจฉริยะ (${settings.semester}/${settings.academicYear})</div>
+                <div class="text-[11px] text-slate-500 font-heading whitespace-nowrap overflow-hidden text-ellipsis">
+                  ระบบบริหารจัดการห้องเรียนอัจฉริยะ (${settings.semester}/${settings.academicYear})
+                </div>
               </div>
             </div>
 
-            <!-- Mobile Controls -->
-            <div class="flex md:hidden items-center gap-2">
-              <button id="btn-avatar-mobile" class="w-8 h-8 rounded-full bg-white border border-sky-300 flex items-center justify-center overflow-hidden">
+            <!-- Mobile Action Controls -->
+            <div class="flex lg:hidden items-center gap-2">
+              <button id="btn-avatar-mobile" class="w-8 h-8 rounded-full bg-white border border-sky-300 flex items-center justify-center overflow-hidden shrink-0">
                 ${avatarContent}
               </button>
-              <button id="btn-change-pass-mobile" class="text-xs text-sky-800 font-bold px-2.5 py-1 bg-sky-100 rounded-xl border border-sky-200">🔑 รหัสผ่าน</button>
-              <button id="btn-logout-mobile" class="text-xs text-rose-600 font-bold px-2.5 py-1 bg-rose-50 rounded-xl border border-rose-200">🚪 ออกจากระบบ</button>
+              <button id="btn-change-pass-mobile" class="text-xs text-sky-800 font-bold px-2.5 py-1 bg-white rounded-xl border border-sky-300 whitespace-nowrap">🔑 รหัสผ่าน</button>
+              <button id="btn-logout-mobile" class="text-xs text-rose-600 font-bold px-2.5 py-1 bg-rose-50 rounded-xl border border-rose-200 whitespace-nowrap">🚪 ออกจากระบบ</button>
             </div>
           </div>
 
           <!-- Navigation Tabs -->
-          <nav class="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto py-1 scrollbar-none">
+          <nav class="flex items-center gap-1.5 overflow-x-auto w-full lg:w-auto py-1 scrollbar-none">
             ${visibleTabs.map(t => `
               <button 
                 data-tab="${t.id}" 
-                class="tab-btn px-4 py-2 rounded-xl text-xs font-heading whitespace-nowrap transition-all ${
+                class="tab-btn px-3.5 py-1.5 rounded-xl text-xs font-heading whitespace-nowrap transition-all ${
                   this.activeTab === t.id ? 'nav-tab-active' : 'nav-tab-inactive'
                 }"
               >
@@ -171,48 +173,51 @@ class SchoolApp {
             `).join('')}
           </nav>
 
-          <!-- Right Toolbar & User Profile Avatar Actions -->
-          <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-            <!-- Sync Status Badge -->
-            <div id="sync-status-badge"></div>
+          <!-- Right Toolbar: Central Server Live + Role Badge + User Info + Action Buttons -->
+          <div class="hidden lg:flex items-center gap-2.5 w-auto justify-end shrink-0">
+            <!-- Central Server Live Badge (Futuristic Live Indicator) -->
+            <div id="sync-status-badge" class="shrink-0"></div>
 
-            <!-- Read-Only Static Role Badge -->
-            <div class="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-sky-200 text-xs font-heading font-bold ${
-              currentUser.role === 'Admin' ? 'text-purple-700 bg-purple-50/80 border-purple-200' :
-              currentUser.role === 'Teacher' ? 'text-sky-800 bg-sky-100/80 border-sky-200' :
-              'text-emerald-700 bg-emerald-50/80 border-emerald-200'
+            <!-- Role Badge -->
+            <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-heading font-bold whitespace-nowrap shrink-0 shadow-sm ${
+              currentUser.role === 'Admin' ? 'text-purple-700 bg-purple-50/90 border-purple-200' :
+              currentUser.role === 'Teacher' ? 'text-sky-800 bg-sky-100/90 border-sky-200' :
+              'text-emerald-700 bg-emerald-50/90 border-emerald-200'
             }">
               <span class="text-[11px] text-slate-400 font-normal">สิทธิ์:</span>
               <span>${currentUser.role === 'Admin' ? '👑 Admin' : currentUser.role === 'Teacher' ? '👨‍🏫 Teacher' : '🎓 Student'}</span>
             </div>
 
-            <!-- User Profile Avatar & Actions -->
-            <div class="hidden sm:flex items-center gap-3 pl-3 border-l border-sky-200/90">
-              <button id="btn-user-avatar" class="relative group cursor-pointer" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
+            <!-- User Avatar & Profile -->
+            <div class="flex items-center gap-2.5 pl-2.5 border-l border-sky-200/80">
+              <button id="btn-user-avatar" class="relative group cursor-pointer shrink-0" title="คลิกเพื่อเปลี่ยนรูปโปรไฟล์">
                 <div class="w-9 h-9 rounded-full bg-white border-2 border-sky-400 group-hover:border-indigo-600 flex items-center justify-center overflow-hidden shadow-sm transition-all group-hover:scale-105">
                   ${avatarContent}
                 </div>
                 <span class="absolute -bottom-1 -right-1 w-4 h-4 bg-sky-600 text-white rounded-full text-[9px] flex items-center justify-center shadow">✏️</span>
               </button>
 
-              <div class="text-right">
-                <div class="text-xs font-heading font-bold text-slate-900 leading-none">${decodeMojibakeThai(currentUser.name)}</div>
-                <div class="text-[10px] text-slate-500 font-mono mt-1">${currentUser.email || currentUser.studentId || ''}</div>
+              <div class="text-right whitespace-nowrap">
+                <div class="text-xs font-heading font-bold text-slate-900 leading-tight">${decodeMojibakeThai(currentUser.name)}</div>
+                <div class="text-[10px] text-slate-500 font-mono mt-0.5">${currentUser.email || currentUser.studentId || ''}</div>
               </div>
-
-              <!-- Password Change Button -->
-              <button id="btn-change-pass" class="bg-white/90 text-sky-800 hover:bg-sky-100 border border-sky-300 text-xs px-3 py-1.5 rounded-xl font-heading font-semibold transition-all shadow-sm flex items-center gap-1">
-                <span>🔑</span> เปลี่ยนรหัสผ่าน
-              </button>
-
-              <!-- Logout Button -->
-              <button id="btn-logout" class="bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 text-xs px-3.5 py-1.5 rounded-xl font-heading font-semibold transition-all shadow-sm">
-                🚪 ออกจากระบบ
-              </button>
             </div>
+
+            <!-- Change Password Button (Futuristic Horizontal Pill) -->
+            <button id="btn-change-pass" class="px-3.5 py-1.5 rounded-xl font-heading font-bold text-xs bg-white hover:bg-sky-50 text-sky-700 border border-sky-300/80 hover:border-sky-400 shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 hover:scale-105 active:scale-95 cursor-pointer">
+              <span class="text-sm">🔑</span>
+              <span>เปลี่ยนรหัสผ่าน</span>
+            </button>
+
+            <!-- Logout Button (Futuristic Red Pill) -->
+            <button id="btn-logout" class="px-3.5 py-1.5 rounded-xl font-heading font-bold text-xs bg-rose-50/80 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 hover:border-rose-500 shadow-sm transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 hover:scale-105 active:scale-95 cursor-pointer">
+              <span class="text-sm">🚪</span>
+              <span>ออกจากระบบ</span>
+            </button>
           </div>
         </div>
       </header>
+    `;
     `;
 
     // Event Listeners
