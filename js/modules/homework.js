@@ -1338,8 +1338,21 @@ export class HomeworkModule {
 
     modalEl.querySelector('#sub-form').addEventListener('submit', (e) => {
       e.preventDefault();
-      const submissions = hw.submissions || [];
-      const index = submissions.findIndex(s => s.studentId === currentUser.studentId);
+      const allHw = firebaseService.getCollection('homework');
+      const activeHw = allHw.find(h => h.id === hw.id) || hw;
+
+      const rawSubs = activeHw.submissions || {};
+      let subsMap = {};
+      
+      if (Array.isArray(rawSubs)) {
+        rawSubs.forEach(s => {
+          if (s && s.studentId) subsMap[s.studentId] = s;
+        });
+      } else if (typeof rawSubs === 'object') {
+        Object.assign(subsMap, rawSubs);
+      }
+
+      const existing = subsMap[currentUser.studentId];
 
       const now = new Date();
       const year = now.getFullYear();
@@ -1355,18 +1368,14 @@ export class HomeworkModule {
         submittedAt: localTimeString,
         textResponse: document.getElementById('sub-text').value.trim(),
         imageFile: uploadedImageUrl,
-        score: index !== -1 ? submissions[index].score : null,
-        feedback: index !== -1 ? submissions[index].feedback : '',
-        status: index !== -1 ? submissions[index].status : 'Pending'
+        score: existing && existing.score !== undefined ? existing.score : null,
+        feedback: existing ? (existing.feedback || '') : '',
+        status: existing ? (existing.status || 'Pending') : 'Pending'
       };
 
-      if (index !== -1) {
-        submissions[index] = newSub;
-      } else {
-        submissions.push(newSub);
-      }
+      subsMap[currentUser.studentId] = newSub;
 
-      firebaseService.updateItem('homework', hw.id, { submissions: submissions });
+      firebaseService.updateItem('homework', hw.id, { submissions: subsMap });
       modalEl.remove();
       refreshCb();
     });
@@ -1463,11 +1472,11 @@ export class HomeworkModule {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
                   <div>
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">ให้คะแนน (เต็ม ${hw.maxPoints})</label>
-                    <input type="number" max="${hw.maxPoints}" data-sub-idx="${idx}" class="sub-score-input input-field py-1 text-xs" value="${sub.score !== null && sub.score !== undefined ? sub.score : ''}" placeholder="ระบุคะแนน">
+                    <input type="number" max="${hw.maxPoints}" data-std-id="${sub.studentId}" class="sub-score-input input-field py-1 text-xs" value="${sub.score !== null && sub.score !== undefined ? sub.score : ''}" placeholder="ระบุคะแนน">
                   </div>
                   <div>
                     <label class="block text-[11px] font-semibold text-slate-600 mb-1 font-heading">คำแนะนำ / ความเห็นครู</label>
-                    <input type="text" data-sub-idx="${idx}" class="sub-feedback-input input-field py-1 text-xs" value="${sub.feedback || ''}" placeholder="เช่น ทำได้เยี่ยมมาก!">
+                    <input type="text" data-std-id="${sub.studentId}" class="sub-feedback-input input-field py-1 text-xs" value="${sub.feedback || ''}" placeholder="เช่น ทำได้เยี่ยมมาก!">
                   </div>
                 </div>
               </div>
@@ -1514,13 +1523,20 @@ export class HomeworkModule {
           const allHw = firebaseService.getCollection('homework');
           const activeHw = allHw.find(h => h.id === hw.id) || hw;
           
-          let currentSubs = Array.isArray(activeHw.submissions) ? activeHw.submissions : [];
-          currentSubs = currentSubs.filter(s => s.studentId !== stdId);
+          const rawSubs = activeHw.submissions || {};
+          let subsMap = {};
+          if (Array.isArray(rawSubs)) {
+            rawSubs.forEach(s => { if (s && s.studentId) subsMap[s.studentId] = s; });
+          } else if (typeof rawSubs === 'object') {
+            Object.assign(subsMap, rawSubs);
+          }
 
-          activeHw.submissions = currentSubs;
-          hw.submissions = currentSubs;
+          delete subsMap[stdId];
 
-          await firebaseService.updateItem('homework', hw.id, { submissions: currentSubs });
+          activeHw.submissions = subsMap;
+          hw.submissions = subsMap;
+
+          await firebaseService.updateItem('homework', hw.id, { submissions: subsMap });
           modalEl.remove();
 
           await showAlertModal({
@@ -1539,21 +1555,28 @@ export class HomeworkModule {
       b.addEventListener('click', () => {
         const allHw = firebaseService.getCollection('homework');
         const activeHw = allHw.find(h => h.id === hw.id) || hw;
-        const currentSubs = Array.isArray(activeHw.submissions) ? activeHw.submissions : [];
+        
+        const rawSubs = activeHw.submissions || {};
+        let subsMap = {};
+        if (Array.isArray(rawSubs)) {
+          rawSubs.forEach(s => { if (s && s.studentId) subsMap[s.studentId] = s; });
+        } else if (typeof rawSubs === 'object') {
+          Object.assign(subsMap, rawSubs);
+        }
 
         modalEl.querySelectorAll('.sub-score-input').forEach(input => {
-          const idx = parseInt(input.dataset.subIdx, 10);
+          const stdId = input.dataset.stdId;
           const val = input.value !== '' ? parseInt(input.value, 10) : null;
-          const fbInput = modalEl.querySelector(`.sub-feedback-input[data-sub-idx="${idx}"]`);
+          const fbInput = modalEl.querySelector(`.sub-feedback-input[data-std-id="${stdId}"]`);
 
-          if (currentSubs[idx]) {
-            currentSubs[idx].score = val;
-            currentSubs[idx].feedback = fbInput ? fbInput.value.trim() : '';
-            currentSubs[idx].status = val !== null ? 'Graded' : 'Pending';
+          if (subsMap[stdId]) {
+            subsMap[stdId].score = val;
+            subsMap[stdId].feedback = fbInput ? fbInput.value.trim() : '';
+            subsMap[stdId].status = val !== null ? 'Graded' : 'Pending';
           }
         });
 
-        firebaseService.updateItem('homework', hw.id, { submissions: currentSubs });
+        firebaseService.updateItem('homework', hw.id, { submissions: subsMap });
         modalEl.remove();
         refreshCb();
       });
