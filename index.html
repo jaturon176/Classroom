@@ -14,7 +14,7 @@
   <!-- Automatic Browser Cache Purge Engine -->
   <script>
     (function() {
-      const CURRENT_APP_VERSION = 'v6.9';
+      const CURRENT_APP_VERSION = 'v7.0';
       const storedVersion = localStorage.getItem('ag_auto_cache_version');
       if (storedVersion !== CURRENT_APP_VERSION) {
         localStorage.setItem('ag_auto_cache_version', CURRENT_APP_VERSION);
@@ -32,10 +32,10 @@
     })();
   </script>
 
-  <!-- Thai Official Government & Professional Web Fonts (Sarabun Standard) -->
+  <!-- Thai Official Government Web Fonts (Sarabun / TH Sarabun PSK Standard) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Krub:ital,wght@0,400;0,600;0,700;1,400&family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,600;1,700&display=swap" rel="stylesheet">
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -44,16 +44,16 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', 'Krub', 'sans-serif'],
-            heading: ['Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', 'Krub', 'sans-serif'],
+            sans: ['Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', 'sans-serif'],
+            heading: ['Sarabun', 'TH Sarabun New', 'TH Sarabun PSK', 'sans-serif'],
           }
         }
       }
     }
   </script>
 
-  <!-- Custom Modern Light Design System (Automatic Cache-Busted Query v=6.9) -->
-  <link rel="stylesheet" href="./css/styles.css?v=6.9">
+  <!-- Custom Modern Light Design System (Automatic Cache-Busted Query v7.0) -->
+  <link rel="stylesheet" href="./css/styles.css?v=7.0">
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
 
@@ -74,12 +74,12 @@
   <footer class="border-t border-slate-200/80 py-6 text-center text-xs text-slate-500 bg-white/80 backdrop-blur-md mt-auto">
     <div class="max-w-7xl mx-auto px-4 flex justify-center items-center">
       <div class="font-medium text-slate-600 text-center">
-        © 2026 Krunoii-Classroom Platform — Multi-Cloud Architecture <span class="font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 inline-block ml-1">(v6.9)</span>
+        © 2026 Krunoii-Classroom Platform — Multi-Cloud Architecture <span class="font-mono text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100 inline-block ml-1">(v7.0)</span>
       </div>
     </div>
   </footer>
 
-  <!-- Application Module Script (Automatic Cache-Busted Query v=6.9) -->
-  <script type="module" src="./js/app.js?v=6.9"></script>
+  <!-- Application Module Script (Automatic Cache-Busted Query v7.0) -->
+  <script type="module" src="./js/app.js?v=7.0"></script>
 </body>
 </html>
