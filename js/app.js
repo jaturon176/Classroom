@@ -4,16 +4,16 @@
  * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
-import { RBACModule } from './modules/rbac.js?v=5.3';
-import { DashboardModule } from './modules/dashboard.js?v=5.3';
-import { StudentsModule } from './modules/students.js?v=5.3';
-import { HomeworkModule } from './modules/homework.js?v=5.3';
-import { QuizModule } from './modules/quiz.js?v=5.3';
-import { AttendanceModule } from './modules/attendance.js?v=5.3';
-import { GradebookModule } from './modules/gradebook.js?v=5.3';
-import { SettingsModule } from './modules/settings.js?v=5.3';
-import { syncEngine } from './services/syncEngine.js?v=5.3';
-import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=5.3';
+import { RBACModule } from './modules/rbac.js?v=5.4';
+import { DashboardModule } from './modules/dashboard.js?v=5.4';
+import { StudentsModule } from './modules/students.js?v=5.4';
+import { HomeworkModule } from './modules/homework.js?v=5.4';
+import { QuizModule } from './modules/quiz.js?v=5.4';
+import { AttendanceModule } from './modules/attendance.js?v=5.4';
+import { GradebookModule } from './modules/gradebook.js?v=5.4';
+import { SettingsModule } from './modules/settings.js?v=5.4';
+import { syncEngine } from './services/syncEngine.js?v=5.4';
+import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=5.4';
 
 class SchoolApp {
   constructor() {
@@ -166,12 +166,12 @@ class SchoolApp {
             </div>
           </div>
 
-          <!-- Center: Navigation Tabs (Pro Compact Pills) -->
-          <nav class="flex items-center gap-1 overflow-x-auto w-full xl:w-auto py-0.5 scrollbar-none justify-start xl:justify-center">
+          <!-- Center: Navigation Tabs (Pro Compact Pills - Always Visible Flex-Wrap) -->
+          <nav class="flex flex-wrap items-center gap-1 w-full xl:w-auto py-0.5 justify-start xl:justify-center">
             ${visibleTabs.map(t => `
               <button 
                 data-tab="${t.id}" 
-                class="tab-btn px-3 py-1.5 rounded-xl text-xs font-heading whitespace-nowrap font-medium transition-all ${
+                class="tab-btn px-3 py-1.5 rounded-xl text-xs font-heading whitespace-nowrap font-medium transition-all shrink-0 ${
                   this.activeTab === t.id ? 'nav-tab-active' : 'nav-tab-inactive'
                 }"
               >
