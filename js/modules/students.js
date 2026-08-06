@@ -10,9 +10,9 @@
  * - Export Roster & Batch Deletion
  */
 
-import { firebaseService } from '../services/firebaseService.js?v=3.1';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=3.1';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=3.1';
+import { firebaseService } from '../services/firebaseService.js';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
 
 export class StudentsModule {
   constructor(rbac) {

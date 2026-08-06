@@ -11,9 +11,9 @@
  * - Toggle Open / Close Quiz Access (เปิด/ปิด รับการทำแบบทดสอบ).
  */
 
-import { firebaseService } from '../services/firebaseService.js?v=4.0';
-import { decodeMojibakeThai } from '../services/mojibakeDecoder.js?v=4.0';
-import { showConfirmModal, showAlertModal } from '../services/dialogService.js?v=4.0';
+import { firebaseService } from '../services/firebaseService.js';
+import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
+import { showConfirmModal, showAlertModal } from '../services/dialogService.js';
 
 export class QuizModule {
   constructor(rbac) {
