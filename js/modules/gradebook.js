@@ -220,55 +220,6 @@ export class GradebookModule {
           </div>
         </div>
 
-        <!-- Visual Analytics Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <!-- Grade Distribution Box -->
-          <div class="glass-card p-6 rounded-3xl shadow-sm bg-white border border-slate-200 space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm font-heading flex items-center gap-2">
-              <span>📈</span> การกระจายตัวของเกรด
-            </h3>
-            <div class="space-y-3 pt-1">
-              ${['4 (A)', '3 (B)', '2 (C)', '1 (D)', 'F'].map(g => {
-                const count = reportData.filter(r => r.gradeLetter === g).length;
-                const pct = reportData.length > 0 ? Math.round((count / reportData.length) * 100) : 0;
-                return `
-                  <div>
-                    <div class="flex justify-between text-xs font-semibold text-slate-600">
-                      <span>เกรด ${g}</span>
-                      <span>${count} คน (${pct}%)</span>
-                    </div>
-                    <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-1 border border-slate-200">
-                      <div class="bg-indigo-600 h-full transition-all" style="width: ${pct}%"></div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-
-          <!-- Score Breakdown Card -->
-          <div class="glass-card p-6 rounded-3xl shadow-sm bg-white border border-slate-200 md:col-span-2 space-y-4">
-            <h3 class="font-bold text-slate-900 text-sm font-heading flex items-center gap-2">
-              <span>📊</span> เปรียบเทียบคะแนนเฉลี่ยการบ้านเทียบกับแบบทดสอบ
-            </h3>
-            <div class="grid grid-cols-2 gap-4 py-2">
-              <div class="p-5 rounded-2xl bg-indigo-50/70 border border-indigo-100 text-center">
-                <div class="text-xs text-indigo-700 font-bold font-heading uppercase tracking-wider">คะแนนการบ้านเฉลี่ย</div>
-                <div class="text-3xl font-extrabold text-slate-900 font-heading mt-1">
-                  ${reportData.length > 0 ? Math.round(reportData.reduce((a, b) => a + b.earnedHwPoints, 0) / reportData.length) : 0} <span class="text-xs font-normal text-slate-500">คะแนน</span>
-                </div>
-              </div>
-
-              <div class="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-100 text-center">
-                <div class="text-xs text-emerald-700 font-bold font-heading uppercase tracking-wider">คะแนนแบบทดสอบเฉลี่ย</div>
-                <div class="text-3xl font-extrabold text-slate-900 font-heading mt-1">
-                  ${reportData.length > 0 ? Math.round(reportData.reduce((a, b) => a + b.earnedQuizPoints, 0) / reportData.length) : 0} <span class="text-xs font-normal text-slate-500">คะแนน</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Gradebook Consolidated Matrix Table (Sorted by Student Number / เลขที่) -->
         <div class="glass-card rounded-3xl overflow-hidden shadow-sm bg-white border border-slate-200">
           <div class="overflow-x-auto">
