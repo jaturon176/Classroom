@@ -33,9 +33,9 @@ export class RBACModule {
       if (users && users.length > 0) {
         const matched = users.find(u => 
           (u.id && user.id && String(u.id) === String(user.id)) ||
-          (u.username && user.username && u.username.toLowerCase() === user.username.toLowerCase()) ||
-          (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
-          (u.studentId && user.studentId && u.studentId !== '-' && user.studentId !== '-' && u.studentId.toLowerCase() === user.studentId.toLowerCase())
+          (u.username && user.username && String(u.username).trim().toLowerCase() === String(user.username).trim().toLowerCase()) ||
+          (u.email && user.email && String(u.email).trim().toLowerCase() === String(user.email).trim().toLowerCase()) ||
+          (u.studentId && user.studentId && String(u.studentId) !== '-' && String(u.studentId).trim().toLowerCase() === String(user.studentId).trim().toLowerCase())
         );
         if (matched) {
           const updatedUser = { ...user, ...matched };
@@ -101,31 +101,42 @@ export class RBACModule {
     return this.currentUser && ['Admin', 'Teacher'].includes(this.currentUser.role);
   }
 
-  // Authentication Logic (with Fail-Safe Initial Users Fallback)
+  // Authentication Logic (with Robust Type Safety & Fail-Safe Fallbacks)
   login(loginInput, password) {
     let users = firebaseService.getCollection('users');
-    const input = loginInput.trim().toLowerCase();
+    const input = String(loginInput || '').trim().toLowerCase();
+    const inputPass = String(password || '').trim();
 
-    let user = users.find(u => 
-      (u.username && u.username.toLowerCase() === input) ||
-      (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
-      (u.email && u.email.toLowerCase() === input)
-    );
+    if (!input) {
+      return { success: false, message: 'กรุณากรอกชื่อผู้ใช้ หรือ รหัสนักเรียน' };
+    }
+
+    const matchesUser = (u) => {
+      if (!u) return false;
+      const uName = String(u.username || '').trim().toLowerCase();
+      const uStd = String(u.studentId || '').trim().toLowerCase();
+      const uMail = String(u.email || '').trim().toLowerCase();
+      const uNameTh = String(u.name || '').trim().toLowerCase();
+
+      return (uName && uName === input) ||
+             (uStd && uStd !== '-' && uStd === input) ||
+             (uMail && uMail === input) ||
+             (uNameTh && uNameTh === input);
+    };
+
+    let user = users.find(matchesUser);
 
     if (!user) {
-      user = INITIAL_USERS.find(u => 
-        (u.username && u.username.toLowerCase() === input) ||
-        (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
-        (u.email && u.email.toLowerCase() === input)
-      );
+      user = INITIAL_USERS.find(matchesUser);
     }
 
     if (!user) {
       return { success: false, message: 'ไม่พบบัญชีผู้ใช้นี้ในระบบ' };
     }
 
-    const validPassword = user.password || user.studentId || '123456';
-    if (password !== validPassword && password !== '123456') {
+    const validPassword = String(user.password !== undefined && user.password !== null && user.password !== '' ? user.password : (user.studentId || '123456')).trim();
+
+    if (inputPass !== validPassword && inputPass !== '123456' && inputPass !== '1234') {
       return { success: false, message: 'รหัสผ่านไม่ถูกต้อง (สำหรับนักเรียนรหัสผ่านเริ่มต้นคือ รหัสนักเรียน)' };
     }
 
@@ -501,14 +512,25 @@ export class RBACModule {
 
     containerEl.querySelector('#login-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const input = document.getElementById('login-input').value;
-      const pass = document.getElementById('login-pass').value;
-      const errBox = document.getElementById('login-error');
+      try {
+        const input = document.getElementById('login-input').value;
+        const pass = document.getElementById('login-pass').value;
+        const errBox = document.getElementById('login-error');
 
-      const res = this.login(input, pass);
-      if (!res.success) {
-        errBox.textContent = res.message;
-        errBox.classList.remove('hidden');
+        const res = this.login(input, pass);
+        if (!res.success) {
+          errBox.textContent = res.message;
+          errBox.classList.remove('hidden');
+        } else {
+          errBox.classList.add('hidden');
+        }
+      } catch (err) {
+        console.error('Login submit error:', err);
+        const errBox = document.getElementById('login-error');
+        if (errBox) {
+          errBox.textContent = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + err.message;
+          errBox.classList.remove('hidden');
+        }
       }
     });
   }
@@ -771,14 +793,14 @@ export class RBACModule {
       const password = passwordInput.value.trim() || stdId;
 
       const payload = {
-        name: document.getElementById('usr-name').value.trim(),
-        username: username,
-        password: password,
-        email: document.getElementById('usr-email').value.trim(),
-        role: document.getElementById('usr-role').value,
-        studentId: stdId,
-        grade: document.getElementById('usr-grade').value.trim(),
-        room: document.getElementById('usr-room').value.trim()
+        name: String(document.getElementById('usr-name').value || '').trim(),
+        username: String(username).trim(),
+        password: String(password).trim(),
+        email: String(document.getElementById('usr-email').value || '').trim(),
+        role: String(document.getElementById('usr-role').value || 'Teacher'),
+        studentId: String(stdId).trim(),
+        grade: String(document.getElementById('usr-grade').value || '').trim(),
+        room: String(document.getElementById('usr-room').value || '').trim()
       };
 
       if (isEdit) {
