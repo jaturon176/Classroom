@@ -57,6 +57,9 @@ export class HomeworkModule {
 
       // Filter homework by role & target class/room
       let visibleHomework = Array.isArray(homeworkList) ? homeworkList.filter(Boolean) : [];
+      let studentProfile = null;
+      let studentGrade = '-';
+      let studentRoom = '-';
 
       if (currentUser && currentUser.role === 'Teacher') {
         visibleHomework = visibleHomework.filter(hw => {
@@ -75,9 +78,9 @@ export class HomeworkModule {
           )
         ) : null;
 
-        const studentProfile = latestProfile || currentUser || {};
-        const studentGrade = String(studentProfile.grade || '').trim();
-        const studentRoom = String(studentProfile.room || '').trim();
+        studentProfile = latestProfile || currentUser || {};
+        studentGrade = String(studentProfile.grade || '').trim();
+        studentRoom = String(studentProfile.room || '').trim();
         const cleanStudentRoom = studentRoom.replace(/\D/g, ''); // Extract digits e.g. "3" from "ห้อง 3"
 
         visibleHomework = visibleHomework.filter(hw => {
@@ -201,8 +204,8 @@ export class HomeworkModule {
                 <div class="inline-flex flex-wrap items-center justify-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl text-xs text-slate-600 font-heading">
                   <span>👤 ข้อมูลชั้นเรียนของคุณในระบบ:</span>
                   <span class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 font-mono">
-                    ${(studentProfile && studentProfile.grade && studentProfile.grade !== '-') ? studentProfile.grade : 'ไม่ระบุชั้น'} 
-                    ${(studentProfile && studentProfile.room && studentProfile.room !== '-') ? `(ห้อง ${studentProfile.room})` : '(ไม่ระบุห้อง)'}
+                    ${(studentGrade && studentGrade !== '-') ? studentGrade : 'ไม่ระบุชั้น'} 
+                    ${(studentRoom && studentRoom !== '-') ? `(ห้อง ${studentRoom})` : '(ไม่ระบุห้อง)'}
                   </span>
                 </div>
                 <p class="text-[11px] text-slate-400 italic">*(หากห้องเรียนไม่ตรง สามารถแจ้งคุณครูหรือแอดมินให้เปลี่ยนห้องในเมนูจัดการผู้ใช้ได้ครับ)*</p>
