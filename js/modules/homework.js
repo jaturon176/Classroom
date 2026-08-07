@@ -184,8 +184,21 @@ export class HomeworkModule {
           </h3>
 
           ${visibleHomework.length === 0 ? `
-            <div class="glass-card p-12 text-center text-slate-400 rounded-3xl bg-white border border-slate-200">
-              ${currentUser.role === 'Student' ? 'ไม่มีการบ้านที่มอบหมายสำหรับห้องเรียนของคุณในขณะนี้' : 'ไม่พบรายการการบ้านในวิชานี้'}
+            <div class="glass-card p-8 sm:p-12 text-center rounded-3xl bg-white border border-slate-200 space-y-3">
+              <div class="text-3xl">📭</div>
+              <div class="text-sm font-bold font-heading text-slate-700">
+                ${currentUser.role === 'Student' ? 'ไม่มีการบ้านที่มอบหมายสำหรับระดับชั้นและห้องเรียนของคุณในขณะนี้' : 'ไม่พบรายการการบ้านในวิชานี้'}
+              </div>
+              ${currentUser.role === 'Student' ? `
+                <div class="inline-flex flex-wrap items-center justify-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl text-xs text-slate-600 font-heading">
+                  <span>👤 ข้อมูลชั้นเรียนของคุณในระบบ:</span>
+                  <span class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 font-mono">
+                    ${(studentProfile && studentProfile.grade && studentProfile.grade !== '-') ? studentProfile.grade : 'ไม่ระบุชั้น'} 
+                    ${(studentProfile && studentProfile.room && studentProfile.room !== '-') ? `(ห้อง ${studentProfile.room})` : '(ไม่ระบุห้อง)'}
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400 italic">*(หากห้องเรียนไม่ตรง สามารถแจ้งคุณครูหรือแอดมินให้เปลี่ยนห้องในเมนูจัดการผู้ใช้ได้ครับ)*</p>
+              ` : ''}
             </div>
           ` : visibleHomework.map(hw => {
             const rawSubs = hw.submissions || [];
