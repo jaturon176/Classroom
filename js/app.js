@@ -4,16 +4,16 @@
  * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
-import { RBACModule } from './modules/rbac.js?v=8.1';
-import { DashboardModule } from './modules/dashboard.js?v=8.1';
-import { StudentsModule } from './modules/students.js?v=8.1';
-import { HomeworkModule } from './modules/homework.js?v=8.1';
-import { QuizModule } from './modules/quiz.js?v=8.1';
-import { AttendanceModule } from './modules/attendance.js?v=8.1';
-import { GradebookModule } from './modules/gradebook.js?v=8.1';
-import { SettingsModule } from './modules/settings.js?v=8.1';
-import { syncEngine } from './services/syncEngine.js?v=8.1';
-import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=8.1';
+import { RBACModule } from './modules/rbac.js?v=8.2';
+import { DashboardModule } from './modules/dashboard.js?v=8.2';
+import { StudentsModule } from './modules/students.js?v=8.2';
+import { HomeworkModule } from './modules/homework.js?v=8.2';
+import { QuizModule } from './modules/quiz.js?v=8.2';
+import { AttendanceModule } from './modules/attendance.js?v=8.2';
+import { GradebookModule } from './modules/gradebook.js?v=8.2';
+import { SettingsModule } from './modules/settings.js?v=8.2';
+import { syncEngine } from './services/syncEngine.js?v=8.2';
+import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=8.2';
 
 class SchoolApp {
   constructor() {
@@ -98,6 +98,9 @@ class SchoolApp {
   handleAuthChange(user) {
     if (!user) {
       this.activeTab = 'dashboard';
+    }
+    if (this.settingsModule) {
+      this.settingsModule.initSettings();
     }
     this.renderHeader();
     this.renderActiveTab();

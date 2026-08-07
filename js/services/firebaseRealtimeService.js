@@ -105,9 +105,51 @@ class FirebaseRealtimeService {
           }));
         });
       });
+
+      // 3. 🎨 Attach Dedicated Realtime Listener for System Theme Settings across all student & teacher screens
+      const settingsRef = ref(this.db, 'school_settings');
+      onValue(settingsRef, (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          let settingsObj = null;
+          if (val.active) {
+            settingsObj = val.active;
+          } else if (Array.isArray(val) && val.length > 0) {
+            settingsObj = val.find(s => s.id === 'active') || val[0];
+          } else if (typeof val === 'object') {
+            const firstKey = Object.keys(val)[0];
+            settingsObj = val[firstKey];
+          }
+
+          if (settingsObj && settingsObj.theme) {
+            localStorage.setItem('antigravity_school_settings', JSON.stringify(settingsObj));
+            localStorage.setItem('ag_school_settings', JSON.stringify([settingsObj]));
+
+            // Apply Theme instantly on every connected window (Student, Teacher, Admin)
+            if (window.app && window.app.settingsModule) {
+              window.app.settingsModule.settings = settingsObj;
+              window.app.settingsModule.applyTheme();
+              window.app.renderHeader();
+            } else {
+              document.body.setAttribute('data-theme', settingsObj.theme);
+            }
+
+            window.dispatchEvent(new CustomEvent('ag_theme_changed', { detail: settingsObj }));
+          }
+        }
+      });
     } catch (err) {
       console.warn('Central server connection warning (using offline local cache):', err);
       this.isRealtimeConnected = false;
+    }
+  }
+
+  // Save System Settings & Active Theme to Central Server
+  saveSystemSettings(settingsObj) {
+    localStorage.setItem('antigravity_school_settings', JSON.stringify(settingsObj));
+    localStorage.setItem('ag_school_settings', JSON.stringify([settingsObj]));
+    if (this.db) {
+      set(ref(this.db, 'school_settings/active'), settingsObj);
     }
   }
 

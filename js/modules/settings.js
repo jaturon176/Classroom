@@ -49,26 +49,36 @@ export class SettingsModule {
       allowStudentAvatar: true
     };
 
-    if (!raw) {
-      this.settings = defaultSettings;
-      this.saveSettings();
-    } else {
+    let activeSettings = defaultSettings;
+
+    if (raw) {
       try {
         const parsed = JSON.parse(raw);
-        this.settings = {
-          ...defaultSettings,
-          ...parsed
-        };
-        if (!this.settings.schoolLogo || this.settings.schoolLogo === '⚡') {
-          this.settings.schoolLogo = './logo school.jpg';
-        }
-        if (!this.settings.bannerTitle || this.settings.bannerTitle === 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่') {
-          this.settings.bannerTitle = 'ยินดีต้อนรับสู่ห้องเรียนครูน้อย';
-        }
-      } catch (e) {
-        this.settings = defaultSettings;
-      }
+        activeSettings = { ...defaultSettings, ...parsed };
+      } catch (e) {}
     }
+
+    // Check Firebase Realtime DB cached settings
+    const agRaw = localStorage.getItem('ag_school_settings');
+    if (agRaw) {
+      try {
+        const parsedAg = JSON.parse(agRaw);
+        const serverObj = Array.isArray(parsedAg) ? (parsedAg.find(s => s.id === 'active') || parsedAg[0]) : parsedAg;
+        if (serverObj && serverObj.theme) {
+          activeSettings = { ...activeSettings, ...serverObj };
+        }
+      } catch (e) {}
+    }
+
+    if (!activeSettings.schoolLogo || activeSettings.schoolLogo === '⚡') {
+      activeSettings.schoolLogo = './logo school.jpg';
+    }
+    if (!activeSettings.bannerTitle || activeSettings.bannerTitle === 'ยินดีต้อนรับสู่ระบบบริหารจัดการห้องเรียนยุคใหม่') {
+      activeSettings.bannerTitle = 'ยินดีต้อนรับสู่ห้องเรียนครูน้อย';
+    }
+
+    this.settings = activeSettings;
+    localStorage.setItem('antigravity_school_settings', JSON.stringify(this.settings));
     this.applyTheme();
   }
 
@@ -78,11 +88,12 @@ export class SettingsModule {
 
   saveSettings() {
     localStorage.setItem('antigravity_school_settings', JSON.stringify(this.settings));
+    localStorage.setItem('ag_school_settings', JSON.stringify([this.settings]));
     this.applyTheme();
 
     // 🌐 Realtime Multi-Device Sync: Push active theme & settings to Central Firebase Realtime DB
     try {
-      firebaseService.updateItem('school_settings', 'active', this.settings);
+      firebaseService.saveSystemSettings(this.settings);
     } catch (e) {
       console.warn('Realtime settings sync notice:', e);
     }
