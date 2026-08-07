@@ -29,7 +29,7 @@ class FirebaseRealtimeService {
     this.app = null;
     this.db = null;
     this.isRealtimeConnected = false;
-    this.collections = ['users', 'courses', 'homework', 'quizzes', 'announcements', 'attendance'];
+    this.collections = ['users', 'courses', 'homework', 'quizzes', 'announcements', 'attendance', 'school_settings'];
 
     // Seed local cache defaults if empty
     this.initLocalDefaults();

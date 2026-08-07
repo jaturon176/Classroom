@@ -5,20 +5,26 @@
  * and comprehensive system-wide preferences.
  */
 
+import { firebaseService } from '../services/firebaseService.js';
 import { decodeMojibakeThai } from '../services/mojibakeDecoder.js';
 import { showAlertModal } from '../services/dialogService.js';
 
 export const THEME_PRESETS = [
-  { id: 'ocean', name: 'Ocean Breeze (ฟ้าพาสเทล)', bgClass: 'bg-sky-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%), radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%)', primary: '#0284c7', description: 'โทนสีฟ้าพาสเทล ละมุนตา เหมาะกับการเรียนรู้' },
-  { id: 'mint', name: 'Emerald Mint (เขียวมิ้นต์)', bgClass: 'bg-emerald-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.12) 0px, transparent 50%)', primary: '#059669', description: 'โทนสีเขียวมิ้นต์ สดชื่น ผ่อนคลายสายตา' },
-  { id: 'slate', name: 'Classic Slate (เทาเรียบหรู)', bgClass: 'bg-slate-100', bgStyle: 'radial-gradient(at 0% 0%, rgba(148, 163, 184, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(71, 85, 105, 0.12) 0px, transparent 50%)', primary: '#475569', description: 'โทนสีเทาเรียบหรู สบายตา อ่านง่าย' },
-  { id: 'sakura', name: 'Sakura Blossom (ชมพูพาสเทล)', bgClass: 'bg-pink-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(244, 114, 182, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(219, 39, 119, 0.1) 0px, transparent 50%)', primary: '#db2777', description: 'โทนสีชมพูพาสเทล อบอุ่น อ่อนโยน' },
-  { id: 'lavender', name: 'Lavender Dream (ม่วงพาสเทล)', bgClass: 'bg-purple-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(192, 132, 252, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(147, 51, 234, 0.1) 0px, transparent 50%)', primary: '#9333ea', description: 'โทนสีม่วงลาเวนเดอร์ ผ่อนคลาย นุ่มนวล' },
-  { id: 'peach', name: 'Sunset Peach (ส้มพาสเทล)', bgClass: 'bg-amber-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(251, 146, 60, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.1) 0px, transparent 50%)', primary: '#d97706', description: 'โทนสีส้มพีช อบอุ่น มีชีวิตชีวา' },
-  { id: 'cyan', name: 'Cyber Cyan (ฟ้าไซเบอร์)', bgClass: 'bg-cyan-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(34, 211, 238, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.1) 0px, transparent 50%)', primary: '#0891b2', description: 'โทนสีฟ้าไซเบอร์ ล้ำสมัย สดใส' },
-  { id: 'rose', name: 'Rose Gold (ชมพูกุหลาบ)', bgClass: 'bg-rose-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(251, 113, 133, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(225, 29, 72, 0.1) 0px, transparent 50%)', primary: '#e11d48', description: 'โทนสีชมพูกุหลาบ พรีเมียม หรูหรา' },
-  { id: 'teal', name: 'Ocean Teal (เขียวฟ้าทะเล)', bgClass: 'bg-teal-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(45, 212, 191, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(13, 148, 136, 0.1) 0px, transparent 50%)', primary: '#0d9488', description: 'โทนสีเขียวฟ้าทะเล ลึกซึ้ง เย็นสบาย' },
-  { id: 'midnight', name: 'Midnight Indigo (ม่วงฟิวเจอร์)', bgClass: 'bg-indigo-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(129, 140, 248, 0.15) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(79, 70, 229, 0.12) 0px, transparent 50%)', primary: '#4f46e5', description: 'โทนสีม่วงอินดิโก้ สไตล์ Futuristic' }
+  { id: 'indigo-classic', name: 'คลาสสิกอินดิโก้ (Indigo Executive)', icon: '💙', bgClass: 'bg-indigo-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.08) 0px, transparent 50%), radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.04) 0px, transparent 50%)', primary: '#4f46e5', secondary: '#6366f1', description: 'โทนสีม่วงอินดิโก้และสเลท พรีเมียม คลาสสิก เรียบหรู' },
+  { id: 'ocean-blue', name: 'ฟ้ามงคลมหาสมุทร (Oceanic Azure)', icon: '🌊', bgClass: 'bg-sky-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.18) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(14, 165, 233, 0.14) 0px, transparent 50%), radial-gradient(at 50% 100%, rgba(99, 102, 241, 0.06) 0px, transparent 50%)', primary: '#0284c7', secondary: '#0ea5e9', description: 'โทนสีฟ้ามหาสมุทร สดชื่น โปร่งสบาย ผ่อนคลายสายตา' },
+  { id: 'emerald-mint', name: 'เขียวมินต์มงคล (Fresh Emerald)', icon: '🌿', bgClass: 'bg-emerald-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(20, 184, 166, 0.14) 0px, transparent 50%)', primary: '#059669', secondary: '#10b981', description: 'โทนสีเขียวมินต์ธรรมชาติ สดชื่น มีพลัง ให้ความรู้สึกสงบ' },
+  { id: 'royal-purple', name: 'ม่วงกาแล็กซีพรีเมียม (Royal Purple)', icon: '🔮', bgClass: 'bg-purple-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(192, 132, 252, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(147, 51, 234, 0.14) 0px, transparent 50%)', primary: '#7c3aed', secondary: '#9333ea', description: 'โทนสีม่วงกาแล็กซี ล้ำสมัย พรีเมียม มีเสน่ห์น่าดึงดูด' },
+  { id: 'rose-coral', name: 'ชมพูกุหลาบสดใส (Rose Coral)', icon: '🌹', bgClass: 'bg-rose-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(251, 113, 133, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(225, 29, 72, 0.14) 0px, transparent 50%)', primary: '#e11d48', secondary: '#f43f5e', description: 'โทนสีชมพูกุหลาบคอรัล อบอุ่น สดใส สนุกสนานกับการเรียน' },
+  { id: 'sunset-amber', name: 'ส้มทองอบอุ่น (Sunset Amber)', icon: '🌅', bgClass: 'bg-amber-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(251, 146, 60, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.14) 0px, transparent 50%)', primary: '#d97706', secondary: '#f59e0b', description: 'โทนสีส้มทองอบอุ่น มีพลัง มีชีวิตชีวา กระตุ้นความคิดสร้างสรรค์' },
+  { id: 'dark-midnight', name: 'ดาร์กโหมดพรีเมียม (Midnight Dark)', icon: '🌙', bgClass: 'bg-slate-900', bgStyle: '#0b1329', primary: '#38bdf8', secondary: '#818cf8', description: 'ดาร์กโหมดหรูหรา สไตล์ Midnight Executive ถนอมสายตา' },
+  { id: 'cyberpunk-neon', name: 'ไซเบอร์พังก์นีออน (Cyberpunk Neon)', icon: '🌌', bgClass: 'bg-slate-950', bgStyle: '#090d16', primary: '#06b6d4', secondary: '#d946ef', description: 'โทนสีนีออนไซเบอร์ปังก์ ล้ำยุค โดดเด่น มีสไตล์' },
+  { id: 'bamboo-forest', name: 'เขียวป่าไผ่ (Bamboo Forest)', icon: '🍃', bgClass: 'bg-emerald-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(34, 197, 94, 0.16) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(21, 128, 61, 0.12) 0px, transparent 50%)', primary: '#15803d', secondary: '#047857', description: 'โทนสีเขียวป่าไผ่อบอุ่นเป็นธรรมชาติ ผ่อนคลายสูงสุด' },
+  { id: 'sakura-blossom', name: 'ชมพูซากุระพาสเทล (Sakura Blossom)', icon: '🌸', bgClass: 'bg-pink-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(244, 114, 182, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(219, 39, 119, 0.12) 0px, transparent 50%)', primary: '#db2777', secondary: '#f472b6', description: 'โทนสีชมพูซากุระอ่อนหวาน ละมุน น่ารัก' },
+  { id: 'deep-space', name: 'อวกาศลึกลับ (Cosmic Deep Space)', icon: '🪐', bgClass: 'bg-slate-950', bgStyle: '#050814', primary: '#6366f1', secondary: '#a855f7', description: 'โทนสีอวกาศลึกซึ้ง พรีเมียม ดาร์กโหมดลึกลับ' },
+  { id: 'golden-sand', name: 'ทรายทองอบอุ่น (Golden Terracotta)', icon: '🏖️', bgClass: 'bg-amber-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(245, 158, 11, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(180, 83, 9, 0.12) 0px, transparent 50%)', primary: '#b45309', secondary: '#d97706', description: 'โทนสีทรายทองและเทอราคอตตา อบอุ่น มีคุณค่า' },
+  { id: 'nordic-berry', name: 'บลูเบอร์รีนอร์ดิค (Nordic Blueberry)', icon: '🫐', bgClass: 'bg-indigo-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(129, 140, 248, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(55, 48, 163, 0.14) 0px, transparent 50%)', primary: '#3730a3', secondary: '#4338ca', description: 'โทนสีบลูเบอร์รีนอร์ดิค เข้มขรึม มีเสน่ห์ เย็นสบาย' },
+  { id: 'volcanic-ruby', name: 'ทับทิมภูเขาไฟ (Volcanic Ruby Red)', icon: '🌋', bgClass: 'bg-red-50/80', bgStyle: 'radial-gradient(at 0% 0%, rgba(248, 113, 113, 0.18) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(185, 28, 28, 0.12) 0px, transparent 50%)', primary: '#dc2626', secondary: '#b91c1c', description: 'โทนสีแดงทับทิมร้อนแรง มีพลัง กระตือรือร้น' },
+  { id: 'espresso-warm', name: 'เอสเพรสโซหรูหรา (Warm Espresso Mocha)', icon: '☕', bgClass: 'bg-stone-100', bgStyle: 'radial-gradient(at 0% 0%, rgba(168, 162, 158, 0.2) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(120, 53, 15, 0.12) 0px, transparent 50%)', primary: '#78350f', secondary: '#92400e', description: 'โทนสีกาแฟเอสเพรสโซ คลาสสิก อบอุ่น สไตล์ผู้บริหาร' }
 ];
 
 export class SettingsModule {
@@ -35,7 +41,7 @@ export class SettingsModule {
       schoolLogo: './logo school.jpg',
       academicYear: '2026',
       semester: 'ภาคเรียนที่ 1',
-      theme: 'ocean',
+      theme: 'indigo-classic',
       customBgColor: '',
       bannerTitle: 'ยินดีต้อนรับสู่ห้องเรียนครูน้อย',
       showClock: true,
@@ -73,22 +79,40 @@ export class SettingsModule {
   saveSettings() {
     localStorage.setItem('antigravity_school_settings', JSON.stringify(this.settings));
     this.applyTheme();
+
+    // 🌐 Realtime Multi-Device Sync: Push active theme & settings to Central Firebase Realtime DB
+    try {
+      firebaseService.updateItem('school_settings', 'active', this.settings);
+    } catch (e) {
+      console.warn('Realtime settings sync notice:', e);
+    }
   }
 
-  // Directly apply theme gradient / custom background color to body
+  // Directly apply theme gradient / custom background color to body & document root
   applyTheme() {
     const customColor = this.settings.customBgColor;
     if (customColor) {
+      document.body.removeAttribute('data-theme');
       document.body.style.backgroundColor = customColor;
       document.body.style.backgroundImage = 'none';
       return;
     }
 
-    const themeId = this.settings.theme || 'ocean';
+    const themeId = this.settings.theme || 'indigo-classic';
     const preset = THEME_PRESETS.find(p => p.id === themeId) || THEME_PRESETS[0];
 
-    document.body.style.backgroundColor = '#f8fafc';
-    document.body.style.backgroundImage = preset.bgStyle;
+    document.body.setAttribute('data-theme', themeId);
+
+    const darkThemes = ['dark-midnight', 'cyberpunk-neon', 'deep-space'];
+    if (darkThemes.includes(themeId)) {
+      document.body.style.backgroundColor = preset.bgStyle.startsWith('#') ? preset.bgStyle : '#0b1329';
+      document.body.style.backgroundImage = 'radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(217, 70, 239, 0.12) 0px, transparent 50%)';
+      document.body.style.color = '#f8fafc';
+    } else {
+      document.body.style.backgroundColor = '#f8fafc';
+      document.body.style.backgroundImage = preset.bgStyle;
+      document.body.style.color = '#0f172a';
+    }
     document.body.style.backgroundAttachment = 'fixed';
   }
 
@@ -210,19 +234,32 @@ export class SettingsModule {
             ${THEME_PRESETS.map(preset => `
               <div 
                 data-theme-id="${preset.id}" 
-                class="p-4 rounded-2xl border cursor-pointer transition-all space-y-2 flex flex-col justify-between ${
+                class="p-4.5 rounded-2xl border cursor-pointer transition-all space-y-3 flex flex-col justify-between hover:scale-[1.02] ${
                   !this.settings.customBgColor && this.settings.theme === preset.id 
-                    ? 'ring-2 ring-sky-500 bg-sky-50/90 border-sky-400 shadow-md' 
-                    : 'bg-white border-slate-200 hover:border-sky-300 hover:bg-slate-50'
+                    ? 'ring-2 ring-indigo-500 bg-indigo-50/70 border-indigo-400 shadow-md' 
+                    : 'bg-white border-slate-200 hover:border-indigo-300 hover:bg-slate-50/80'
                 }"
               >
-                <div class="flex items-center justify-between">
-                  <div class="font-bold text-slate-900 text-sm font-heading">${preset.name}</div>
-                  <span class="w-5 h-5 rounded-full border border-white shadow-sm" style="background-color: ${preset.primary}"></span>
+                <div class="flex items-center justify-between gap-2">
+                  <div class="font-bold text-slate-900 text-xs sm:text-sm font-heading flex items-center gap-1.5">
+                    <span class="text-base">${preset.icon || '🎨'}</span>
+                    <span>${preset.name}</span>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <span class="w-4 h-4 rounded-full border border-white shadow-xs" style="background-color: ${preset.primary}"></span>
+                    <span class="w-4 h-4 rounded-full border border-white shadow-xs" style="background-color: ${preset.secondary || preset.primary}"></span>
+                  </div>
                 </div>
-                <p class="text-xs text-slate-500">${preset.description}</p>
-                <div class="text-[11px] font-bold ${!this.settings.customBgColor && this.settings.theme === preset.id ? 'text-sky-700' : 'text-slate-400'} pt-1">
-                  ${!this.settings.customBgColor && this.settings.theme === preset.id ? '✓ ธีมปัจจุบัน' : 'คลิกเพื่อเปลี่ยนเป็นธีมนี้'}
+                
+                <p class="text-xs text-slate-500 font-heading leading-relaxed">${preset.description}</p>
+
+                <div class="flex items-center justify-between pt-1 border-t border-slate-100/80 text-[11px] font-bold">
+                  <span class="${!this.settings.customBgColor && this.settings.theme === preset.id ? 'text-indigo-600' : 'text-slate-400'}">
+                    ${!this.settings.customBgColor && this.settings.theme === preset.id ? '✓ ธีมที่เปิดใช้อยู่ (Active)' : 'คลิกเพื่อเลือกธีมนี้'}
+                  </span>
+                  <span class="text-[10px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full font-mono">
+                    Realtime Sync
+                  </span>
                 </div>
               </div>
             `).join('')}

@@ -4,16 +4,16 @@
  * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
-import { RBACModule } from './modules/rbac.js?v=7.3';
-import { DashboardModule } from './modules/dashboard.js?v=7.3';
-import { StudentsModule } from './modules/students.js?v=7.3';
-import { HomeworkModule } from './modules/homework.js?v=7.3';
-import { QuizModule } from './modules/quiz.js?v=7.3';
-import { AttendanceModule } from './modules/attendance.js?v=7.3';
-import { GradebookModule } from './modules/gradebook.js?v=7.3';
-import { SettingsModule } from './modules/settings.js?v=7.3';
-import { syncEngine } from './services/syncEngine.js?v=7.3';
-import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=7.3';
+import { RBACModule } from './modules/rbac.js?v=8.1';
+import { DashboardModule } from './modules/dashboard.js?v=8.1';
+import { StudentsModule } from './modules/students.js?v=8.1';
+import { HomeworkModule } from './modules/homework.js?v=8.1';
+import { QuizModule } from './modules/quiz.js?v=8.1';
+import { AttendanceModule } from './modules/attendance.js?v=8.1';
+import { GradebookModule } from './modules/gradebook.js?v=8.1';
+import { SettingsModule } from './modules/settings.js?v=8.1';
+import { syncEngine } from './services/syncEngine.js?v=8.1';
+import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=8.1';
 
 class SchoolApp {
   constructor() {
@@ -34,6 +34,25 @@ class SchoolApp {
 
     // 🌐 Central Primary Server 0.1s Realtime Sync Listener for all connected devices
     window.addEventListener('ag_realtime_update', () => {
+      // 🎨 Always apply central system theme sync across all connected users
+      try {
+        const remoteSettings = firebaseService.getCollection('school_settings');
+        if (remoteSettings && remoteSettings.length > 0) {
+          const activeSettings = remoteSettings.find(s => s.id === 'active') || remoteSettings[0];
+          if (activeSettings && activeSettings.theme) {
+            localStorage.setItem('antigravity_school_settings', JSON.stringify(activeSettings));
+            if (this.settingsModule) {
+              this.settingsModule.settings = activeSettings;
+              this.settingsModule.applyTheme();
+            }
+          }
+        } else {
+          if (this.settingsModule) this.settingsModule.applyTheme();
+        }
+      } catch (e) {
+        console.warn('Realtime theme sync check notice:', e);
+      }
+
       // 🛡️ UNIVERSAL UI & SESSION PROTECTION SHIELD
       // Prevent kicking user out or resetting active screens during live updates:
       
@@ -164,6 +183,12 @@ class SchoolApp {
               <!-- Sync Status Badge -->
               <div id="sync-status-badge" class="hidden md:block"></div>
 
+              <!-- Active System Theme Pill Indicator -->
+              <button id="btn-quick-theme" class="hidden lg:flex items-center gap-1.5 bg-white/90 hover:bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200/90 text-xs font-heading font-semibold shadow-xs transition-all cursor-pointer" title="คลิกเพื่อเปลี่ยนธีมระบบ">
+                <span>🎨 ธีม:</span>
+                <span class="text-indigo-600 font-bold">${(this.settingsModule ? this.settingsModule.getSettings().theme : 'indigo-classic').split('-')[0]}</span>
+              </button>
+
               <!-- Role Badge -->
               <div class="hidden sm:flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200 text-[11px] font-heading font-semibold ${
                 currentUser.role === 'Admin' ? 'text-purple-700 bg-purple-50/80 border-purple-200' :
@@ -225,6 +250,7 @@ class SchoolApp {
       });
     });
 
+    headerContainer.querySelector('#btn-quick-theme')?.addEventListener('click', () => this.switchTab('settings'));
     headerContainer.querySelector('#btn-user-avatar')?.addEventListener('click', () => this.rbac.showAvatarModal());
     headerContainer.querySelector('#btn-avatar-mobile')?.addEventListener('click', () => this.rbac.showAvatarModal());
     headerContainer.querySelector('#btn-change-pass')?.addEventListener('click', () => this.rbac.showChangePasswordModal());

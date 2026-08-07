@@ -44,6 +44,172 @@ h1, h2, h3, h4, h5, h6, input, button, select, textarea, table, th, td, span, di
   font-family: var(--font-heading) !important;
 }
 
+/* THEME SYSTEM STYLING ENGINE (15 Executive Color Themes) */
+
+/* 1. Classic Indigo Theme (Default) */
+body[data-theme="indigo-classic"], [data-theme="indigo-classic"] {
+  --theme-primary: #4f46e5;
+  --theme-gradient: linear-gradient(135deg, #4f46e5, #6366f1);
+  --theme-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(238, 242, 255, 0.96));
+  --header-border: rgba(199, 210, 254, 0.9);
+}
+
+/* 2. Emerald Ocean Blue Theme */
+body[data-theme="ocean-blue"], [data-theme="ocean-blue"] {
+  --theme-primary: #0284c7;
+  --theme-gradient: linear-gradient(135deg, #0284c7, #0369a1);
+  --theme-shadow: 0 4px 14px 0 rgba(2, 132, 199, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(224, 242, 254, 0.96));
+  --header-border: rgba(186, 230, 253, 0.9);
+}
+
+/* 3. Fresh Emerald Mint Theme */
+body[data-theme="emerald-mint"], [data-theme="emerald-mint"] {
+  --theme-primary: #059669;
+  --theme-gradient: linear-gradient(135deg, #059669, #0d9488);
+  --theme-shadow: 0 4px 14px 0 rgba(5, 150, 105, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(209, 250, 229, 0.96));
+  --header-border: rgba(167, 243, 208, 0.9);
+}
+
+/* 4. Royal Galaxy Purple Theme */
+body[data-theme="royal-purple"], [data-theme="royal-purple"] {
+  --theme-primary: #7c3aed;
+  --theme-gradient: linear-gradient(135deg, #7c3aed, #9333ea);
+  --theme-shadow: 0 4px 14px 0 rgba(124, 58, 237, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(243, 232, 255, 0.96));
+  --header-border: rgba(233, 213, 255, 0.9);
+}
+
+/* 5. Vibrant Rose Coral Theme */
+body[data-theme="rose-coral"], [data-theme="rose-coral"] {
+  --theme-primary: #e11d48;
+  --theme-gradient: linear-gradient(135deg, #e11d48, #f43f5e);
+  --theme-shadow: 0 4px 14px 0 rgba(225, 29, 72, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(255, 228, 230, 0.96));
+  --header-border: rgba(254, 205, 211, 0.9);
+}
+
+/* 6. Sunset Amber Gold Theme */
+body[data-theme="sunset-amber"], [data-theme="sunset-amber"] {
+  --theme-primary: #d97706;
+  --theme-gradient: linear-gradient(135deg, #d97706, #ea580c);
+  --theme-shadow: 0 4px 14px 0 rgba(217, 119, 6, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(254, 243, 199, 0.96));
+  --header-border: rgba(253, 230, 138, 0.9);
+}
+
+/* 7. Dark Midnight Executive Theme */
+body[data-theme="dark-midnight"] {
+  background-color: #0b1329 !important;
+  color: #f8fafc !important;
+  --theme-primary: #38bdf8;
+  --theme-gradient: linear-gradient(135deg, #0284c7, #4f46e5);
+  --theme-shadow: 0 4px 14px 0 rgba(56, 189, 248, 0.4);
+  --header-bg: rgba(15, 23, 42, 0.96);
+  --header-border: rgba(51, 65, 85, 0.9);
+}
+
+/* 8. Cyberpunk Neon Theme */
+body[data-theme="cyberpunk-neon"] {
+  background-color: #090d16 !important;
+  color: #f8fafc !important;
+  --theme-primary: #06b6d4;
+  --theme-gradient: linear-gradient(135deg, #06b6d4, #d946ef);
+  --theme-shadow: 0 4px 14px 0 rgba(6, 182, 212, 0.45);
+  --header-bg: linear-gradient(90deg, rgba(12, 18, 34, 0.96), rgba(28, 12, 42, 0.96));
+  --header-border: rgba(6, 182, 212, 0.7);
+}
+
+/* 9. Bamboo Forest Theme */
+body[data-theme="bamboo-forest"], [data-theme="bamboo-forest"] {
+  --theme-primary: #15803d;
+  --theme-gradient: linear-gradient(135deg, #15803d, #047857);
+  --theme-shadow: 0 4px 14px 0 rgba(21, 128, 61, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(236, 253, 245, 0.96));
+  --header-border: rgba(167, 243, 208, 0.9);
+}
+
+/* 10. Sakura Blossom Theme */
+body[data-theme="sakura-blossom"], [data-theme="sakura-blossom"] {
+  --theme-primary: #db2777;
+  --theme-gradient: linear-gradient(135deg, #db2777, #f472b6);
+  --theme-shadow: 0 4px 14px 0 rgba(219, 39, 119, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(252, 231, 243, 0.96));
+  --header-border: rgba(251, 207, 232, 0.9);
+}
+
+/* 11. Cosmic Deep Space Theme */
+body[data-theme="deep-space"] {
+  background-color: #050814 !important;
+  color: #f8fafc !important;
+  --theme-primary: #6366f1;
+  --theme-gradient: linear-gradient(135deg, #6366f1, #a855f7);
+  --theme-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.45);
+  --header-bg: linear-gradient(90deg, rgba(8, 14, 30, 0.96), rgba(20, 14, 40, 0.96));
+  --header-border: rgba(99, 102, 241, 0.6);
+}
+
+/* 12. Golden Terracotta Sand Theme */
+body[data-theme="golden-sand"], [data-theme="golden-sand"] {
+  --theme-primary: #b45309;
+  --theme-gradient: linear-gradient(135deg, #b45309, #d97706);
+  --theme-shadow: 0 4px 14px 0 rgba(180, 83, 9, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(254, 243, 199, 0.96));
+  --header-border: rgba(252, 211, 77, 0.9);
+}
+
+/* 13. Nordic Blueberry Theme */
+body[data-theme="nordic-berry"], [data-theme="nordic-berry"] {
+  --theme-primary: #3730a3;
+  --theme-gradient: linear-gradient(135deg, #3730a3, #4338ca);
+  --theme-shadow: 0 4px 14px 0 rgba(55, 48, 163, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(238, 242, 255, 0.96));
+  --header-border: rgba(199, 210, 254, 0.9);
+}
+
+/* 14. Volcanic Ruby Red Theme */
+body[data-theme="volcanic-ruby"], [data-theme="volcanic-ruby"] {
+  --theme-primary: #dc2626;
+  --theme-gradient: linear-gradient(135deg, #dc2626, #b91c1c);
+  --theme-shadow: 0 4px 14px 0 rgba(220, 38, 38, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(254, 226, 226, 0.96));
+  --header-border: rgba(254, 202, 202, 0.9);
+}
+
+/* 15. Warm Espresso Mocha Theme */
+body[data-theme="espresso-warm"], [data-theme="espresso-warm"] {
+  --theme-primary: #78350f;
+  --theme-gradient: linear-gradient(135deg, #78350f, #92400e);
+  --theme-shadow: 0 4px 14px 0 rgba(120, 53, 15, 0.35);
+  --header-bg: linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(245, 245, 244, 0.96));
+  --header-border: rgba(231, 229, 228, 0.9);
+}
+
+/* Dark Mode Card & Text Overrides for Dark Themes */
+body[data-theme="dark-midnight"] .glass-card,
+body[data-theme="cyberpunk-neon"] .glass-card,
+body[data-theme="deep-space"] .glass-card {
+  background: #111c38 !important;
+  border-color: rgba(51, 65, 85, 0.9) !important;
+  color: #f8fafc !important;
+}
+
+body[data-theme="dark-midnight"] h1, body[data-theme="dark-midnight"] h2, body[data-theme="dark-midnight"] h3, body[data-theme="dark-midnight"] h4, body[data-theme="dark-midnight"] p, body[data-theme="dark-midnight"] label,
+body[data-theme="cyberpunk-neon"] h1, body[data-theme="cyberpunk-neon"] h2, body[data-theme="cyberpunk-neon"] h3, body[data-theme="cyberpunk-neon"] h4, body[data-theme="cyberpunk-neon"] p, body[data-theme="cyberpunk-neon"] label,
+body[data-theme="deep-space"] h1, body[data-theme="deep-space"] h2, body[data-theme="deep-space"] h3, body[data-theme="deep-space"] h4, body[data-theme="deep-space"] p, body[data-theme="deep-space"] label {
+  color: #f8fafc !important;
+}
+
+body[data-theme="dark-midnight"] .input-field,
+body[data-theme="cyberpunk-neon"] .input-field,
+body[data-theme="deep-space"] .input-field {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
 /* Official Clean Thai Card Styling */
 .glass-card {
   background: #ffffff;
@@ -51,23 +217,24 @@ h1, h2, h3, h4, h5, h6, input, button, select, textarea, table, th, td, span, di
   box-shadow: 0 4px 20px -2px rgba(31, 38, 135, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
 }
 
-/* Official Navigation Bar - Ultra Modern Pro Glassmorphism */
+/* Official Navigation Bar - Ultra Modern Pro Glassmorphism with Dynamic Header Bar Tint */
 .glass-nav {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--header-bg, rgba(255, 255, 255, 0.95)) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(226, 232, 240, 0.95);
-  box-shadow: 0 2px 16px -2px rgba(15, 23, 42, 0.05);
+  border-bottom: 1px solid var(--header-border, rgba(226, 232, 240, 0.95)) !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06);
+  transition: all 0.3s ease-in-out;
 }
 
 /* Header Specific Button Styling - Sleek Pro Compact Tabs */
 .nav-tab-active {
-  background: linear-gradient(135deg, #4f46e5, #6366f1) !important;
+  background: var(--theme-gradient, linear-gradient(135deg, #4f46e5, #6366f1)) !important;
   color: #ffffff !important;
   font-family: var(--font-heading) !important;
   font-weight: 700 !important;
-  box-shadow: 0 4px 12px 0 rgba(79, 70, 229, 0.3) !important;
-  border: 1px solid rgba(79, 70, 229, 0.9) !important;
+  box-shadow: var(--theme-shadow, 0 4px 12px 0 rgba(79, 70, 229, 0.3)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
 }
 
 .nav-tab-inactive {
@@ -85,8 +252,8 @@ h1, h2, h3, h4, h5, h6, input, button, select, textarea, table, th, td, span, di
 
 /* High Contrast Official Buttons */
 .btn-primary {
-  background: linear-gradient(135deg, #0284c7, #4f46e5);
-  color: #ffffff;
+  background: var(--theme-gradient, linear-gradient(135deg, #0284c7, #4f46e5)) !important;
+  color: #ffffff !important;
   font-family: var(--font-heading) !important;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -95,7 +262,7 @@ h1, h2, h3, h4, h5, h6, input, button, select, textarea, table, th, td, span, di
 
 .btn-primary:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px -5px rgba(2, 132, 199, 0.3);
+  box-shadow: var(--theme-shadow, 0 10px 20px -5px rgba(2, 132, 199, 0.3)) !important;
 }
 
 .btn-secondary {
