@@ -42,71 +42,79 @@ export class HomeworkModule {
   }
 
   render(containerEl) {
-    const courses = firebaseService.getCollection('courses');
-    let homeworkList = firebaseService.getCollection('homework');
-    const currentUser = this.rbac.getCurrentUser();
+    if (!containerEl) return;
 
-    // Teacher Scope Control: Teachers see ONLY courses/homework they teach
-    let visibleCourses = courses;
-    if (currentUser.role === 'Teacher') {
-      visibleCourses = courses.filter(c => decodeMojibakeThai(c.teacher) === decodeMojibakeThai(currentUser.name));
-    }
+    try {
+      const courses = firebaseService.getCollection('courses') || [];
+      const homeworkList = firebaseService.getCollection('homework') || [];
+      const currentUser = (this.rbac ? this.rbac.getCurrentUser() : null) || { role: 'Student', name: 'Guest', studentId: '-' };
 
-    // Filter homework by role & target class/room
-    let visibleHomework = homeworkList;
+      // Teacher Scope Control: Teachers see ONLY courses/homework they teach
+      let visibleCourses = Array.isArray(courses) ? courses.filter(Boolean) : [];
+      if (currentUser && currentUser.role === 'Teacher') {
+        visibleCourses = visibleCourses.filter(c => c && decodeMojibakeThai(c.teacher || '') === decodeMojibakeThai(currentUser.name || ''));
+      }
 
-    if (currentUser.role === 'Teacher') {
-      visibleHomework = homeworkList.filter(hw => {
-        const targetCourse = courses.find(c => c.id === hw.courseId);
-        return targetCourse && decodeMojibakeThai(targetCourse.teacher) === decodeMojibakeThai(currentUser.name);
-      });
-    } else if (currentUser.role === 'Student') {
-      // Re-fetch latest student profile from central users collection (in case grade/room was updated on server)
-      const allUsers = firebaseService.getCollection('users');
-      const latestProfile = allUsers.find(u => 
-        (u.id && currentUser.id && String(u.id) === String(currentUser.id)) ||
-        (u.studentId && currentUser.studentId && String(u.studentId) !== '-' && String(u.studentId).trim() === String(currentUser.studentId).trim()) ||
-        (u.email && currentUser.email && String(u.email).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase())
-      );
-      const studentProfile = latestProfile || currentUser;
-      const studentGrade = String(studentProfile.grade || '').trim();
-      const studentRoom = String(studentProfile.room || '').trim();
-      const cleanStudentRoom = studentRoom.replace(/\D/g, ''); // Extract digits e.g. "3" from "ห้อง 3"
+      // Filter homework by role & target class/room
+      let visibleHomework = Array.isArray(homeworkList) ? homeworkList.filter(Boolean) : [];
 
-      visibleHomework = homeworkList.filter(hw => {
-        const tGrade = String(hw.targetGrade || 'All').trim();
-        const rawRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
-        const hwRooms = Array.isArray(rawRooms) ? rawRooms.map(r => String(r).trim()) : [String(rawRooms).trim()];
-        const cleanHwRooms = hwRooms.map(r => r.replace(/\D/g, ''));
+      if (currentUser && currentUser.role === 'Teacher') {
+        visibleHomework = visibleHomework.filter(hw => {
+          if (!hw) return false;
+          const targetCourse = visibleCourses.find(c => c && c.id === hw.courseId);
+          return targetCourse && decodeMojibakeThai(targetCourse.teacher || '') === decodeMojibakeThai(currentUser.name || '');
+        });
+      } else if (currentUser && currentUser.role === 'Student') {
+        // Re-fetch latest student profile from central users collection (in case grade/room was updated on server)
+        const allUsers = firebaseService.getCollection('users') || [];
+        const latestProfile = Array.isArray(allUsers) ? allUsers.find(u => 
+          u && (
+            (u.id && currentUser.id && String(u.id) === String(currentUser.id)) ||
+            (u.studentId && currentUser.studentId && String(u.studentId) !== '-' && String(u.studentId).trim() === String(currentUser.studentId).trim()) ||
+            (u.email && currentUser.email && String(u.email).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase())
+          )
+        ) : null;
 
-        // Grade check (e.g. "ม.1" vs "ม.1" or "1" vs "1")
-        if (tGrade !== 'All' && studentGrade && studentGrade !== '-') {
-          const tGradeClean = tGrade.replace(/\D/g, '');
-          const sGradeClean = studentGrade.replace(/\D/g, '');
-          const exactGradeMatch = tGrade === studentGrade;
-          const cleanGradeMatch = tGradeClean && sGradeClean && tGradeClean === sGradeClean;
-          if (!exactGradeMatch && !cleanGradeMatch) {
-            return false;
-          }
-        }
+        const studentProfile = latestProfile || currentUser || {};
+        const studentGrade = String(studentProfile.grade || '').trim();
+        const studentRoom = String(studentProfile.room || '').trim();
+        const cleanStudentRoom = studentRoom.replace(/\D/g, ''); // Extract digits e.g. "3" from "ห้อง 3"
 
-        // Room check (e.g. "3" or "ห้อง 3" vs ["3", "5"])
-        if (!hwRooms.includes('All')) {
-          if (studentRoom && studentRoom !== '-') {
-            const hasExactMatch = hwRooms.includes(studentRoom);
-            const hasCleanMatch = cleanStudentRoom && cleanHwRooms.includes(cleanStudentRoom);
-            if (!hasExactMatch && !hasCleanMatch) {
+        visibleHomework = visibleHomework.filter(hw => {
+          if (!hw) return false;
+          const tGrade = String(hw.targetGrade || 'All').trim();
+          const rawRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
+          const hwRooms = Array.isArray(rawRooms) ? rawRooms.map(r => String(r).trim()) : [String(rawRooms).trim()];
+          const cleanHwRooms = hwRooms.map(r => r.replace(/\D/g, ''));
+
+          // Grade check (e.g. "ม.1" vs "ม.1" or "1" vs "1")
+          if (tGrade !== 'All' && studentGrade && studentGrade !== '-') {
+            const tGradeClean = tGrade.replace(/\D/g, '');
+            const sGradeClean = studentGrade.replace(/\D/g, '');
+            const exactGradeMatch = tGrade === studentGrade;
+            const cleanGradeMatch = tGradeClean && sGradeClean && tGradeClean === sGradeClean;
+            if (!exactGradeMatch && !cleanGradeMatch) {
               return false;
             }
           }
-        }
-        return true;
-      });
-    }
 
-    if (this.selectedCourseId !== 'All') {
-      visibleHomework = visibleHomework.filter(hw => hw.courseId === this.selectedCourseId);
-    }
+          // Room check (e.g. "3" or "ห้อง 3" vs ["3", "5"])
+          if (!hwRooms.includes('All')) {
+            if (studentRoom && studentRoom !== '-') {
+              const hasExactMatch = hwRooms.includes(studentRoom);
+              const hasCleanMatch = cleanStudentRoom && cleanHwRooms.includes(cleanStudentRoom);
+              if (!hasExactMatch && !hasCleanMatch) {
+                return false;
+              }
+            }
+          }
+          return true;
+        });
+      }
+
+      if (this.selectedCourseId !== 'All') {
+        visibleHomework = visibleHomework.filter(hw => hw && hw.courseId === this.selectedCourseId);
+      }
 
     containerEl.innerHTML = `
       <div id="hw-module-container" class="space-y-8 animate-fade-in">
@@ -462,6 +470,16 @@ export class HomeworkModule {
         }
       });
     });
+    } catch (err) {
+      console.error('HomeworkModule render exception caught:', err);
+      containerEl.innerHTML = `
+        <div class="glass-card p-8 sm:p-12 text-center rounded-3xl bg-white border border-slate-200 space-y-4 animate-fade-in">
+          <div class="text-4xl">⚡</div>
+          <div class="text-lg font-bold font-heading text-slate-800">กำลังรีเฟรชข้อมูลรายวิชาและการบ้าน...</div>
+          <p class="text-xs text-slate-500 font-heading">ระบบกำลังซิงก์ข้อมูลจากเซิร์ฟเวอร์หลัก กรุณารอแปปเดียวครับ</p>
+        </div>
+      `;
+    }
   }
 
   showCourseModal(targetCourse, refreshCb) {

@@ -4,16 +4,16 @@
  * central server 0.1s real-time updates across all devices, and user avatar updates.
  */
 
-import { RBACModule } from './modules/rbac.js?v=8.6';
-import { DashboardModule } from './modules/dashboard.js?v=8.6';
-import { StudentsModule } from './modules/students.js?v=8.6';
-import { HomeworkModule } from './modules/homework.js?v=8.6';
-import { QuizModule } from './modules/quiz.js?v=8.6';
-import { AttendanceModule } from './modules/attendance.js?v=8.6';
-import { GradebookModule } from './modules/gradebook.js?v=8.6';
-import { SettingsModule } from './modules/settings.js?v=8.6';
-import { syncEngine } from './services/syncEngine.js?v=8.6';
-import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=8.6';
+import { RBACModule } from './modules/rbac.js?v=8.7';
+import { DashboardModule } from './modules/dashboard.js?v=8.7';
+import { StudentsModule } from './modules/students.js?v=8.7';
+import { HomeworkModule } from './modules/homework.js?v=8.7';
+import { QuizModule } from './modules/quiz.js?v=8.7';
+import { AttendanceModule } from './modules/attendance.js?v=8.7';
+import { GradebookModule } from './modules/gradebook.js?v=8.7';
+import { SettingsModule } from './modules/settings.js?v=8.7';
+import { syncEngine } from './services/syncEngine.js?v=8.7';
+import { decodeMojibakeThai } from './services/mojibakeDecoder.js?v=8.7';
 
 class SchoolApp {
   constructor() {
@@ -276,22 +276,33 @@ class SchoolApp {
       return;
     }
 
-    if (this.activeTab === 'dashboard') {
-      this.dashboardModule.render(mainContainer);
-    } else if (this.activeTab === 'students') {
-      this.studentsModule.render(mainContainer);
-    } else if (this.activeTab === 'homework') {
-      this.homeworkModule.render(mainContainer);
-    } else if (this.activeTab === 'quiz') {
-      this.quizModule.render(mainContainer);
-    } else if (this.activeTab === 'attendance') {
-      this.attendanceModule.render(mainContainer);
-    } else if (this.activeTab === 'gradebook') {
-      this.gradebookModule.render(mainContainer);
-    } else if (this.activeTab === 'users' && this.rbac.canManageUsers()) {
-      this.rbac.renderUserManagement(mainContainer, () => this.renderActiveTab());
-    } else if (this.activeTab === 'settings') {
-      this.settingsModule.render(mainContainer);
+    try {
+      if (this.activeTab === 'dashboard') {
+        this.dashboardModule.render(mainContainer);
+      } else if (this.activeTab === 'students') {
+        this.studentsModule.render(mainContainer);
+      } else if (this.activeTab === 'homework') {
+        this.homeworkModule.render(mainContainer);
+      } else if (this.activeTab === 'quiz') {
+        this.quizModule.render(mainContainer);
+      } else if (this.activeTab === 'attendance') {
+        this.attendanceModule.render(mainContainer);
+      } else if (this.activeTab === 'gradebook') {
+        this.gradebookModule.render(mainContainer);
+      } else if (this.activeTab === 'users' && this.rbac.canManageUsers()) {
+        this.rbac.renderUserManagement(mainContainer, () => this.renderActiveTab());
+      } else if (this.activeTab === 'settings') {
+        this.settingsModule.render(mainContainer);
+      }
+    } catch (err) {
+      console.error(`Render error on tab ${this.activeTab}:`, err);
+      mainContainer.innerHTML = `
+        <div class="glass-card p-8 sm:p-12 text-center rounded-3xl bg-white border border-slate-200 space-y-4 animate-fade-in">
+          <div class="text-4xl animate-bounce">⚡</div>
+          <div class="text-lg font-bold font-heading text-slate-800">กำลังเตรียมพร้อมระบบและดึงข้อมูลล่าสุด...</div>
+          <p class="text-xs text-slate-500 font-heading">ระบบกำลังซิงก์ข้อมูลจากเซิร์ฟเวอร์หลัก กรุณารอแปปเดียวครับ</p>
+        </div>
+      `;
     }
   }
 }
