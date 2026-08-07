@@ -61,15 +61,44 @@ export class HomeworkModule {
         return targetCourse && decodeMojibakeThai(targetCourse.teacher) === decodeMojibakeThai(currentUser.name);
       });
     } else if (currentUser.role === 'Student') {
-      visibleHomework = homeworkList.filter(hw => {
-        const tGrade = hw.targetGrade || 'All';
-        const hwRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
+      // Re-fetch latest student profile from central users collection (in case grade/room was updated on server)
+      const allUsers = firebaseService.getCollection('users');
+      const latestProfile = allUsers.find(u => 
+        (u.id && currentUser.id && String(u.id) === String(currentUser.id)) ||
+        (u.studentId && currentUser.studentId && String(u.studentId) !== '-' && String(u.studentId).trim() === String(currentUser.studentId).trim()) ||
+        (u.email && currentUser.email && String(u.email).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase())
+      );
+      const studentProfile = latestProfile || currentUser;
+      const studentGrade = String(studentProfile.grade || '').trim();
+      const studentRoom = String(studentProfile.room || '').trim();
+      const cleanStudentRoom = studentRoom.replace(/\D/g, ''); // Extract digits e.g. "3" from "ห้อง 3"
 
-        if (tGrade !== 'All' && currentUser.grade && currentUser.grade !== '-' && tGrade !== currentUser.grade) {
-          return false;
+      visibleHomework = homeworkList.filter(hw => {
+        const tGrade = String(hw.targetGrade || 'All').trim();
+        const rawRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
+        const hwRooms = Array.isArray(rawRooms) ? rawRooms.map(r => String(r).trim()) : [String(rawRooms).trim()];
+        const cleanHwRooms = hwRooms.map(r => r.replace(/\D/g, ''));
+
+        // Grade check (e.g. "ม.1" vs "ม.1" or "1" vs "1")
+        if (tGrade !== 'All' && studentGrade && studentGrade !== '-') {
+          const tGradeClean = tGrade.replace(/\D/g, '');
+          const sGradeClean = studentGrade.replace(/\D/g, '');
+          const exactGradeMatch = tGrade === studentGrade;
+          const cleanGradeMatch = tGradeClean && sGradeClean && tGradeClean === sGradeClean;
+          if (!exactGradeMatch && !cleanGradeMatch) {
+            return false;
+          }
         }
-        if (!hwRooms.includes('All') && currentUser.room && currentUser.room !== '-' && !hwRooms.includes(currentUser.room)) {
-          return false;
+
+        // Room check (e.g. "3" or "ห้อง 3" vs ["3", "5"])
+        if (!hwRooms.includes('All')) {
+          if (studentRoom && studentRoom !== '-') {
+            const hasExactMatch = hwRooms.includes(studentRoom);
+            const hasCleanMatch = cleanStudentRoom && cleanHwRooms.includes(cleanStudentRoom);
+            if (!hasExactMatch && !hasCleanMatch) {
+              return false;
+            }
+          }
         }
         return true;
       });
