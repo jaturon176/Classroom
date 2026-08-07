@@ -54,9 +54,24 @@ export class RBACModule {
   saveUser(user, triggerAuthChange = true) {
     this.currentUser = user;
     if (user) {
-      const json = JSON.stringify(user);
-      localStorage.setItem('antigravity_current_user', json);
-      sessionStorage.setItem('antigravity_current_user', json);
+      try {
+        const json = JSON.stringify(user);
+        sessionStorage.setItem('antigravity_current_user', json);
+        localStorage.setItem('antigravity_current_user', json);
+      } catch (quotaErr) {
+        console.warn('LocalStorage Quota Exceeded detected! Fallback to lightweight storage:', quotaErr);
+        const lightUser = { ...user };
+        if (lightUser.avatar && lightUser.avatar.length > 500 && lightUser.avatar.startsWith('data:image')) {
+          lightUser.avatar = (lightUser.role === 'Admin' ? '👑' : lightUser.role === 'Teacher' ? '👨‍🏫' : '🎓');
+        }
+        try {
+          const lightJson = JSON.stringify(lightUser);
+          sessionStorage.setItem('antigravity_current_user', lightJson);
+          localStorage.setItem('antigravity_current_user', lightJson);
+        } catch (e2) {
+          console.error('Session storage quota fallback notice:', e2);
+        }
+      }
     } else {
       localStorage.removeItem('antigravity_current_user');
       sessionStorage.removeItem('antigravity_current_user');
@@ -242,7 +257,25 @@ export class RBACModule {
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (ev) => {
-          updatePreview(ev.target.result);
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxDim = 160;
+            let width = img.width;
+            let height = img.height;
+            if (width > height) {
+              if (width > maxDim) { height = Math.round((height * maxDim) / width); width = maxDim; }
+            } else {
+              if (height > maxDim) { width = Math.round((width * maxDim) / height); height = maxDim; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressedUrl = canvas.toDataURL('image/jpeg', 0.8);
+            updatePreview(compressedUrl);
+          };
+          img.src = ev.target.result;
         };
         reader.readAsDataURL(file);
       }
