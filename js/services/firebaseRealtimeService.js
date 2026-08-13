@@ -144,6 +144,42 @@ class FirebaseRealtimeService {
     }
   }
 
+  // 🔄 Force 0.1s Live Sync with Firebase Realtime Central Database
+  async forceSyncWithServer() {
+    if (!this.db) return false;
+    try {
+      for (let key of this.collections) {
+        const snapshot = await get(ref(this.db, key));
+        const val = snapshot.val();
+        let itemsArray = [];
+        if (val) {
+          if (Array.isArray(val)) {
+            itemsArray = val
+              .filter(item => item && typeof item === 'object' && !item._placeholder)
+              .map(item => this.normalizeItem(item));
+          } else if (typeof val === 'object') {
+            itemsArray = Object.keys(val)
+              .filter(k => k !== '_empty' && k !== '_placeholder')
+              .map(k => {
+                const item = val[k];
+                const cleanItem = typeof item === 'object' && item !== null ? { id: k, ...item } : item;
+                return this.normalizeItem(cleanItem);
+              })
+              .filter(item => item && typeof item === 'object' && !item._placeholder);
+          }
+        }
+        localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
+        window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+          detail: { collection: key, items: itemsArray }
+        }));
+      }
+      return true;
+    } catch (e) {
+      console.warn('Force sync error:', e);
+      return false;
+    }
+  }
+
   // Save System Settings & Active Theme to Central Server
   saveSystemSettings(settingsObj) {
     localStorage.setItem('antigravity_school_settings', JSON.stringify(settingsObj));

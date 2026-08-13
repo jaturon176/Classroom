@@ -135,6 +135,12 @@ export class HomeworkModule {
       });
     }
 
+    // Support viewing ALL server data across all roles when toggle is enabled
+    if (this.showAllServerData) {
+      visibleCourses = courses;
+      visibleHomework = homeworkList;
+    }
+
     const activeSelectedCourse = courses.find(c => c.id === this.selectedCourseId);
     if (this.selectedCourseId !== 'All') {
       visibleHomework = visibleHomework.filter(hw => {
@@ -153,15 +159,20 @@ export class HomeworkModule {
         <!-- Header & Top Actions -->
         <div class="glass-card p-6 md:p-8 rounded-3xl shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white border border-slate-200">
           <div>
-            <h2 class="text-2xl font-bold text-slate-900 font-heading flex items-center gap-2">
-              <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 text-xl">📚</span>
-              วิชาเรียนและการบ้าน (Courses & Homework)
-            </h2>
-            <p class="text-slate-500 text-xs mt-1">จัดการวิชาเรียน, สั่งการบ้านแนบรูปภาพ/YouTube หลายไฟล์, มอบหมายรายห้อง และตรวจงานนักเรียน</p>
+            <div class="flex flex-wrap items-center gap-2.5">
+              <h2 class="text-2xl font-bold text-slate-900 font-heading flex items-center gap-2">
+                <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl border border-indigo-100 text-xl">📚</span>
+                วิชาเรียนและการบ้าน (Courses & Homework)
+              </h2>
+              <span class="inline-flex items-center gap-1.5 text-[11px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1 rounded-full font-bold font-heading shadow-2xs">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> 0.1s Realtime Auto-Sync Live ⚡
+              </span>
+            </div>
+            <p class="text-slate-500 text-xs mt-1">จัดการวิชาเรียน, สั่งการบ้านแนบรูปภาพ/YouTube หลายไฟล์, มอบหมายรายห้อง และตรวจงานนักเรียน (ระบบซิงก์อัตโนมัติกับเซิร์ฟเวอร์สิงคโปร์ตลอดเวลา)</p>
           </div>
 
           ${this.rbac.canManageHomework() ? `
-            <div class="flex flex-wrap gap-3">
+            <div class="flex flex-wrap items-center gap-3">
               <button id="btn-add-course" class="btn-secondary text-xs px-4 py-2.5 rounded-xl font-heading font-semibold flex items-center gap-1.5">
                 <span>➕</span> เพิ่มวิชาเรียนใหม่
               </button>
