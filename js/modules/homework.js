@@ -84,25 +84,50 @@ export class HomeworkModule {
         const tGrade = hw.targetGrade || 'All';
         const hwRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
 
-        // Check Grade matching with clean numeric comparison
+        // Helper to parse primary grade number (e.g. "ม.1/3" -> "1", "ม.1" -> "1", "1" -> "1")
+        const parseGradeNum = (str) => {
+          if (!str || str === 'All' || str === '-') return null;
+          const firstPart = String(str).split(/[\/\-\s]/)[0];
+          const match = firstPart.match(/\d+/);
+          return match ? match[0] : null;
+        };
+
+        // Helper to parse room number (e.g. room: "3" -> "3", grade: "ม.1/3" -> "3")
+        const parseRoomNum = (user) => {
+          if (!user) return null;
+          if (user.room && user.room !== '-') {
+            const m = String(user.room).match(/\d+/);
+            if (m) return m[0];
+          }
+          if (user.grade && String(user.grade).includes('/')) {
+            const parts = String(user.grade).split('/');
+            if (parts[1]) {
+              const m = parts[1].match(/\d+/);
+              if (m) return m[0];
+            }
+          }
+          return null;
+        };
+
+        // Check Grade matching
         if (tGrade !== 'All' && currentUser.grade && currentUser.grade !== '-') {
-          const cleanUserGrade = currentUser.grade.replace(/[^0-9]/g, '');
-          const cleanTargetGrade = String(tGrade).replace(/[^0-9]/g, '');
-          if (cleanUserGrade && cleanTargetGrade && cleanUserGrade !== cleanTargetGrade) {
+          const userGradeNum = parseGradeNum(currentUser.grade);
+          const targetGradeNum = parseGradeNum(tGrade);
+          if (userGradeNum && targetGradeNum && userGradeNum !== targetGradeNum) {
             return false;
           }
         }
 
-        // Check Room matching with clean numeric comparison
-        if (hwRooms.includes('All')) return true;
+        // Check Room matching
+        if (hwRooms.includes('All') || hwRooms.some(r => String(r).toLowerCase() === 'all')) return true;
 
-        const cleanUserRoom = currentUser.room ? String(currentUser.room).replace(/[^0-9]/g, '') : '';
-        if (!cleanUserRoom) return true;
+        const userRoomNum = parseRoomNum(currentUser);
+        if (!userRoomNum) return true; // If room not specified, allow student to see
 
         const roomMatches = hwRooms.some(r => {
-          const cleanTargetRoom = String(r).replace(/[^0-9]/g, '');
-          return cleanTargetRoom === cleanUserRoom || 
-                 String(r).includes(cleanUserRoom) || 
+          const targetRoomNum = String(r).replace(/[^0-9]/g, '');
+          return targetRoomNum === userRoomNum || 
+                 String(r).includes(userRoomNum) || 
                  String(currentUser.room || '').includes(String(r));
         });
 
