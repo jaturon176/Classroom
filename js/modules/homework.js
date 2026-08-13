@@ -47,36 +47,80 @@ export class HomeworkModule {
     const currentUser = this.rbac.getCurrentUser();
 
     // Teacher Scope Control: Teachers see ONLY courses/homework they teach
+    // Teacher Scope Control: Teachers see ONLY courses/homework they teach
     let visibleCourses = courses;
     if (currentUser.role === 'Teacher') {
-      visibleCourses = courses.filter(c => decodeMojibakeThai(c.teacher) === decodeMojibakeThai(currentUser.name));
+      const curName = decodeMojibakeThai(currentUser.name).trim().toLowerCase();
+      visibleCourses = courses.filter(c => {
+        const cTeacher = decodeMojibakeThai(c.teacher || '').trim().toLowerCase();
+        return !c.teacher || cTeacher === curName || cTeacher.includes(curName) || curName.includes(cTeacher);
+      });
     }
 
     // Filter homework by role & target class/room
     let visibleHomework = homeworkList;
 
     if (currentUser.role === 'Teacher') {
+      const curName = decodeMojibakeThai(currentUser.name).trim().toLowerCase();
       visibleHomework = homeworkList.filter(hw => {
-        const targetCourse = courses.find(c => c.id === hw.courseId);
-        return targetCourse && decodeMojibakeThai(targetCourse.teacher) === decodeMojibakeThai(currentUser.name);
+        // 1. Direct course match with visible teacher courses
+        const isMyCourse = visibleCourses.some(c => 
+          c.id === hw.courseId || 
+          (c.code && hw.courseCode && c.code === hw.courseCode) ||
+          (c.name && hw.courseName && (c.name === hw.courseName || hw.courseName.includes(c.name) || c.name.includes(hw.courseName)))
+        );
+        if (isMyCourse) return true;
+
+        // 2. Direct teacher/author field match
+        const hwTeacher = hw.teacher ? decodeMojibakeThai(hw.teacher).trim().toLowerCase() : '';
+        const hwAuthor = hw.author ? decodeMojibakeThai(hw.author).trim().toLowerCase() : '';
+        const matchesTeacher = (hwTeacher && (hwTeacher === curName || hwTeacher.includes(curName))) ||
+                               (hwAuthor && (hwAuthor === curName || hwAuthor.includes(curName)));
+
+        return matchesTeacher || !hw.courseId;
       });
     } else if (currentUser.role === 'Student') {
       visibleHomework = homeworkList.filter(hw => {
         const tGrade = hw.targetGrade || 'All';
         const hwRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
 
-        if (tGrade !== 'All' && currentUser.grade && currentUser.grade !== '-' && tGrade !== currentUser.grade) {
-          return false;
+        // Check Grade matching with clean numeric comparison
+        if (tGrade !== 'All' && currentUser.grade && currentUser.grade !== '-') {
+          const cleanUserGrade = currentUser.grade.replace(/[^0-9]/g, '');
+          const cleanTargetGrade = String(tGrade).replace(/[^0-9]/g, '');
+          if (cleanUserGrade && cleanTargetGrade && cleanUserGrade !== cleanTargetGrade) {
+            return false;
+          }
         }
-        if (!hwRooms.includes('All') && currentUser.room && currentUser.room !== '-' && !hwRooms.includes(currentUser.room)) {
-          return false;
-        }
-        return true;
+
+        // Check Room matching with clean numeric comparison
+        if (hwRooms.includes('All')) return true;
+
+        const cleanUserRoom = currentUser.room ? String(currentUser.room).replace(/[^0-9]/g, '') : '';
+        if (!cleanUserRoom) return true;
+
+        const roomMatches = hwRooms.some(r => {
+          const cleanTargetRoom = String(r).replace(/[^0-9]/g, '');
+          return cleanTargetRoom === cleanUserRoom || 
+                 String(r).includes(cleanUserRoom) || 
+                 String(currentUser.room || '').includes(String(r));
+        });
+
+        return roomMatches;
       });
     }
 
+    const activeSelectedCourse = courses.find(c => c.id === this.selectedCourseId);
     if (this.selectedCourseId !== 'All') {
-      visibleHomework = visibleHomework.filter(hw => hw.courseId === this.selectedCourseId);
+      visibleHomework = visibleHomework.filter(hw => {
+        if (hw.courseId === this.selectedCourseId) return true;
+        if (activeSelectedCourse) {
+          if (hw.courseName === activeSelectedCourse.name || hw.courseCode === activeSelectedCourse.code) return true;
+          if (hw.courseName && (hw.courseName.includes(activeSelectedCourse.code) || hw.courseName.includes(activeSelectedCourse.name))) return true;
+          if (activeSelectedCourse.name && activeSelectedCourse.name.includes(hw.courseName)) return true;
+        }
+        return false;
+      });
     }
 
     containerEl.innerHTML = `
@@ -105,7 +149,15 @@ export class HomeworkModule {
 
         <!-- Course Category Selector -->
         <div class="space-y-3">
-          <h3 class="text-sm font-bold text-slate-700 font-heading uppercase tracking-wider">รายวิชาที่คุณรับผิดชอบ</h3>
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-700 font-heading uppercase tracking-wider">รายวิชาที่คุณรับผิดชอบ</h3>
+            ${this.selectedCourseId !== 'All' ? `
+              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-100 font-heading flex items-center gap-1">
+                <span>🔍</span> กรองเฉพาะวิชา: ${activeSelectedCourse ? (activeSelectedCourse.code + ' - ' + activeSelectedCourse.name) : 'วิชาที่เลือก'}
+              </span>
+            ` : ''}
+          </div>
+
           <div class="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
             <button 
               data-course-id="All" 
@@ -155,8 +207,22 @@ export class HomeworkModule {
           </h3>
 
           ${visibleHomework.length === 0 ? `
-            <div class="glass-card p-12 text-center text-slate-400 rounded-3xl bg-white border border-slate-200">
-              ${currentUser.role === 'Student' ? 'ไม่มีการบ้านที่มอบหมายสำหรับห้องเรียนของคุณในขณะนี้' : 'ไม่พบรายการการบ้านในวิชานี้'}
+            <div class="glass-card p-10 text-center text-slate-500 rounded-3xl bg-white border border-slate-200 space-y-3">
+              <div class="text-3xl">📭</div>
+              <div class="text-slate-800 font-bold font-heading text-base">ไม่พบรายการการบ้านในวิชานี้</div>
+              <p class="text-slate-500 text-xs font-heading max-w-md mx-auto">
+                ${this.selectedCourseId !== 'All' 
+                  ? `คุณกำลังเลือกกรองเฉพาะวิชา "${activeSelectedCourse ? (activeSelectedCourse.code + ' - ' + activeSelectedCourse.name) : 'วิชาที่เลือก'}" ทำให้การบ้านของวิชาอื่นถูกซ่อนไว้`
+                  : 'ยังไม่มีรายการการบ้านในระบบ คุณสามารถคลิกปุ่ม "สั่งการบ้านใหม่" เพื่อสร้างการบ้านได้ทันที'}
+              </p>
+
+              ${this.selectedCourseId !== 'All' ? `
+                <div class="pt-2">
+                  <button id="btn-reset-course-filter" class="btn-secondary text-xs px-5 py-2.5 rounded-xl font-heading font-bold inline-flex items-center gap-1.5 shadow-sm">
+                    <span>🌐</span> คลิกเพื่อแสดงการบ้านทุกวิชา (Show All Homework)
+                  </button>
+                </div>
+              ` : ''}
             </div>
           ` : visibleHomework.map(hw => {
             const rawSubs = hw.submissions || [];
@@ -375,6 +441,11 @@ export class HomeworkModule {
     });
 
     // Homework Action Handlers
+    containerEl.querySelector('#btn-reset-course-filter')?.addEventListener('click', () => {
+      this.selectedCourseId = 'All';
+      this.render(containerEl);
+    });
+
     containerEl.querySelector('#btn-add-course')?.addEventListener('click', () => this.showCourseModal(null, () => this.render(containerEl)));
     containerEl.querySelector('#btn-add-hw')?.addEventListener('click', () => this.showHomeworkModal(null, () => this.render(containerEl)));
 
@@ -1079,7 +1150,10 @@ export class HomeworkModule {
       if (isEdit) {
         const updates = {
           courseId: courseId,
+          courseCode: targetCourse ? targetCourse.code : (targetHw.courseCode || ''),
           courseName: targetCourse ? targetCourse.name : (targetHw.courseName || ''),
+          teacher: targetCourse ? targetCourse.teacher : (targetHw.teacher || currentUser.name),
+          author: currentUser.name,
           title: document.getElementById('hw-title').value.trim(),
           detail: document.getElementById('hw-detail').value.trim(),
           dueDate: document.getElementById('hw-date').value,
@@ -1094,7 +1168,10 @@ export class HomeworkModule {
       } else {
         const payload = {
           courseId: courseId,
+          courseCode: targetCourse ? targetCourse.code : '',
           courseName: targetCourse ? targetCourse.name : '',
+          teacher: targetCourse ? targetCourse.teacher : currentUser.name,
+          author: currentUser.name,
           title: document.getElementById('hw-title').value.trim(),
           detail: document.getElementById('hw-detail').value.trim(),
           dueDate: document.getElementById('hw-date').value,
