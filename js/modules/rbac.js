@@ -33,9 +33,9 @@ export class RBACModule {
       if (users && users.length > 0) {
         const matched = users.find(u => 
           (u.id && user.id && String(u.id) === String(user.id)) ||
-          (u.username && user.username && String(u.username).trim().toLowerCase() === String(user.username).trim().toLowerCase()) ||
-          (u.email && user.email && String(u.email).trim().toLowerCase() === String(user.email).trim().toLowerCase()) ||
-          (u.studentId && user.studentId && String(u.studentId) !== '-' && String(u.studentId).trim().toLowerCase() === String(user.studentId).trim().toLowerCase())
+          (u.username && user.username && u.username.toLowerCase() === user.username.toLowerCase()) ||
+          (u.email && user.email && u.email.toLowerCase() === user.email.toLowerCase()) ||
+          (u.studentId && user.studentId && u.studentId !== '-' && user.studentId !== '-' && u.studentId.toLowerCase() === user.studentId.toLowerCase())
         );
         if (matched) {
           const updatedUser = { ...user, ...matched };
@@ -54,24 +54,9 @@ export class RBACModule {
   saveUser(user, triggerAuthChange = true) {
     this.currentUser = user;
     if (user) {
-      try {
-        const json = JSON.stringify(user);
-        sessionStorage.setItem('antigravity_current_user', json);
-        localStorage.setItem('antigravity_current_user', json);
-      } catch (quotaErr) {
-        console.warn('LocalStorage Quota Exceeded detected! Fallback to lightweight storage:', quotaErr);
-        const lightUser = { ...user };
-        if (lightUser.avatar && lightUser.avatar.length > 500 && lightUser.avatar.startsWith('data:image')) {
-          lightUser.avatar = (lightUser.role === 'Admin' ? '👑' : lightUser.role === 'Teacher' ? '👨‍🏫' : '🎓');
-        }
-        try {
-          const lightJson = JSON.stringify(lightUser);
-          sessionStorage.setItem('antigravity_current_user', lightJson);
-          localStorage.setItem('antigravity_current_user', lightJson);
-        } catch (e2) {
-          console.error('Session storage quota fallback notice:', e2);
-        }
-      }
+      const json = JSON.stringify(user);
+      localStorage.setItem('antigravity_current_user', json);
+      sessionStorage.setItem('antigravity_current_user', json);
     } else {
       localStorage.removeItem('antigravity_current_user');
       sessionStorage.removeItem('antigravity_current_user');
@@ -116,42 +101,31 @@ export class RBACModule {
     return this.currentUser && ['Admin', 'Teacher'].includes(this.currentUser.role);
   }
 
-  // Authentication Logic (with Robust Type Safety & Fail-Safe Fallbacks)
+  // Authentication Logic (with Fail-Safe Initial Users Fallback)
   login(loginInput, password) {
     let users = firebaseService.getCollection('users');
-    const input = String(loginInput || '').trim().toLowerCase();
-    const inputPass = String(password || '').trim();
+    const input = loginInput.trim().toLowerCase();
 
-    if (!input) {
-      return { success: false, message: 'กรุณากรอกชื่อผู้ใช้ หรือ รหัสนักเรียน' };
-    }
-
-    const matchesUser = (u) => {
-      if (!u) return false;
-      const uName = String(u.username || '').trim().toLowerCase();
-      const uStd = String(u.studentId || '').trim().toLowerCase();
-      const uMail = String(u.email || '').trim().toLowerCase();
-      const uNameTh = String(u.name || '').trim().toLowerCase();
-
-      return (uName && uName === input) ||
-             (uStd && uStd !== '-' && uStd === input) ||
-             (uMail && uMail === input) ||
-             (uNameTh && uNameTh === input);
-    };
-
-    let user = users.find(matchesUser);
+    let user = users.find(u => 
+      (u.username && u.username.toLowerCase() === input) ||
+      (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
+      (u.email && u.email.toLowerCase() === input)
+    );
 
     if (!user) {
-      user = INITIAL_USERS.find(matchesUser);
+      user = INITIAL_USERS.find(u => 
+        (u.username && u.username.toLowerCase() === input) ||
+        (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
+        (u.email && u.email.toLowerCase() === input)
+      );
     }
 
     if (!user) {
       return { success: false, message: 'ไม่พบบัญชีผู้ใช้นี้ในระบบ' };
     }
 
-    const validPassword = String(user.password !== undefined && user.password !== null && user.password !== '' ? user.password : (user.studentId || '123456')).trim();
-
-    if (inputPass !== validPassword && inputPass !== '123456' && inputPass !== '1234') {
+    const validPassword = user.password || user.studentId || '123456';
+    if (password !== validPassword && password !== '123456') {
       return { success: false, message: 'รหัสผ่านไม่ถูกต้อง (สำหรับนักเรียนรหัสผ่านเริ่มต้นคือ รหัสนักเรียน)' };
     }
 
@@ -257,25 +231,7 @@ export class RBACModule {
         const file = e.target.files[0];
         const reader = new FileReader();
         reader.onload = (ev) => {
-          const img = new Image();
-          img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const maxDim = 160;
-            let width = img.width;
-            let height = img.height;
-            if (width > height) {
-              if (width > maxDim) { height = Math.round((height * maxDim) / width); width = maxDim; }
-            } else {
-              if (height > maxDim) { width = Math.round((width * maxDim) / height); height = maxDim; }
-            }
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedUrl = canvas.toDataURL('image/jpeg', 0.8);
-            updatePreview(compressedUrl);
-          };
-          img.src = ev.target.result;
+          updatePreview(ev.target.result);
         };
         reader.readAsDataURL(file);
       }
@@ -545,25 +501,14 @@ export class RBACModule {
 
     containerEl.querySelector('#login-form')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      try {
-        const input = document.getElementById('login-input').value;
-        const pass = document.getElementById('login-pass').value;
-        const errBox = document.getElementById('login-error');
+      const input = document.getElementById('login-input').value;
+      const pass = document.getElementById('login-pass').value;
+      const errBox = document.getElementById('login-error');
 
-        const res = this.login(input, pass);
-        if (!res.success) {
-          errBox.textContent = res.message;
-          errBox.classList.remove('hidden');
-        } else {
-          errBox.classList.add('hidden');
-        }
-      } catch (err) {
-        console.error('Login submit error:', err);
-        const errBox = document.getElementById('login-error');
-        if (errBox) {
-          errBox.textContent = 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + err.message;
-          errBox.classList.remove('hidden');
-        }
+      const res = this.login(input, pass);
+      if (!res.success) {
+        errBox.textContent = res.message;
+        errBox.classList.remove('hidden');
       }
     });
   }
@@ -826,14 +771,14 @@ export class RBACModule {
       const password = passwordInput.value.trim() || stdId;
 
       const payload = {
-        name: String(document.getElementById('usr-name').value || '').trim(),
-        username: String(username).trim(),
-        password: String(password).trim(),
-        email: String(document.getElementById('usr-email').value || '').trim(),
-        role: String(document.getElementById('usr-role').value || 'Teacher'),
-        studentId: String(stdId).trim(),
-        grade: String(document.getElementById('usr-grade').value || '').trim(),
-        room: String(document.getElementById('usr-room').value || '').trim()
+        name: document.getElementById('usr-name').value.trim(),
+        username: username,
+        password: password,
+        email: document.getElementById('usr-email').value.trim(),
+        role: document.getElementById('usr-role').value,
+        studentId: stdId,
+        grade: document.getElementById('usr-grade').value.trim(),
+        room: document.getElementById('usr-room').value.trim()
       };
 
       if (isEdit) {

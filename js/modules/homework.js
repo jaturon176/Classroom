@@ -42,82 +42,42 @@ export class HomeworkModule {
   }
 
   render(containerEl) {
-    if (!containerEl) return;
+    const courses = firebaseService.getCollection('courses');
+    let homeworkList = firebaseService.getCollection('homework');
+    const currentUser = this.rbac.getCurrentUser();
 
-    try {
-      const courses = firebaseService.getCollection('courses') || [];
-      const homeworkList = firebaseService.getCollection('homework') || [];
-      const currentUser = (this.rbac ? this.rbac.getCurrentUser() : null) || { role: 'Student', name: 'Guest', studentId: '-' };
+    // Teacher Scope Control: Teachers see ONLY courses/homework they teach
+    let visibleCourses = courses;
+    if (currentUser.role === 'Teacher') {
+      visibleCourses = courses.filter(c => decodeMojibakeThai(c.teacher) === decodeMojibakeThai(currentUser.name));
+    }
 
-      // Teacher Scope Control: Teachers see ONLY courses/homework they teach
-      let visibleCourses = Array.isArray(courses) ? courses.filter(Boolean) : [];
-      if (currentUser && currentUser.role === 'Teacher') {
-        visibleCourses = visibleCourses.filter(c => c && decodeMojibakeThai(c.teacher || '') === decodeMojibakeThai(currentUser.name || ''));
-      }
+    // Filter homework by role & target class/room
+    let visibleHomework = homeworkList;
 
-      // Filter homework by role & target class/room
-      let visibleHomework = Array.isArray(homeworkList) ? homeworkList.filter(Boolean) : [];
-      let studentProfile = null;
-      let studentGrade = '-';
-      let studentRoom = '-';
+    if (currentUser.role === 'Teacher') {
+      visibleHomework = homeworkList.filter(hw => {
+        const targetCourse = courses.find(c => c.id === hw.courseId);
+        return targetCourse && decodeMojibakeThai(targetCourse.teacher) === decodeMojibakeThai(currentUser.name);
+      });
+    } else if (currentUser.role === 'Student') {
+      visibleHomework = homeworkList.filter(hw => {
+        const tGrade = hw.targetGrade || 'All';
+        const hwRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
 
-      if (currentUser && currentUser.role === 'Teacher') {
-        visibleHomework = visibleHomework.filter(hw => {
-          if (!hw) return false;
-          const targetCourse = visibleCourses.find(c => c && c.id === hw.courseId);
-          return targetCourse && decodeMojibakeThai(targetCourse.teacher || '') === decodeMojibakeThai(currentUser.name || '');
-        });
-      } else if (currentUser && currentUser.role === 'Student') {
-        // Re-fetch latest student profile from central users collection (in case grade/room was updated on server)
-        const allUsers = firebaseService.getCollection('users') || [];
-        const latestProfile = Array.isArray(allUsers) ? allUsers.find(u => 
-          u && (
-            (u.id && currentUser.id && String(u.id) === String(currentUser.id)) ||
-            (u.studentId && currentUser.studentId && String(u.studentId) !== '-' && String(u.studentId).trim() === String(currentUser.studentId).trim()) ||
-            (u.email && currentUser.email && String(u.email).trim().toLowerCase() === String(currentUser.email).trim().toLowerCase())
-          )
-        ) : null;
+        if (tGrade !== 'All' && currentUser.grade && currentUser.grade !== '-' && tGrade !== currentUser.grade) {
+          return false;
+        }
+        if (!hwRooms.includes('All') && currentUser.room && currentUser.room !== '-' && !hwRooms.includes(currentUser.room)) {
+          return false;
+        }
+        return true;
+      });
+    }
 
-        studentProfile = latestProfile || currentUser || {};
-        studentGrade = String(studentProfile.grade || '').trim();
-        studentRoom = String(studentProfile.room || '').trim();
-        const cleanStudentRoom = studentRoom.replace(/\D/g, ''); // Extract digits e.g. "3" from "ห้อง 3"
-
-        visibleHomework = visibleHomework.filter(hw => {
-          if (!hw) return false;
-          const tGrade = String(hw.targetGrade || 'All').trim();
-          const rawRooms = hw.targetRooms || (hw.targetRoom ? [hw.targetRoom] : ['All']);
-          const hwRooms = Array.isArray(rawRooms) ? rawRooms.map(r => String(r).trim()) : [String(rawRooms).trim()];
-          const cleanHwRooms = hwRooms.map(r => r.replace(/\D/g, ''));
-
-          // Grade check (e.g. "ม.1" vs "ม.1" or "1" vs "1")
-          if (tGrade !== 'All' && studentGrade && studentGrade !== '-') {
-            const tGradeClean = tGrade.replace(/\D/g, '');
-            const sGradeClean = studentGrade.replace(/\D/g, '');
-            const exactGradeMatch = tGrade === studentGrade;
-            const cleanGradeMatch = tGradeClean && sGradeClean && tGradeClean === sGradeClean;
-            if (!exactGradeMatch && !cleanGradeMatch) {
-              return false;
-            }
-          }
-
-          // Room check (e.g. "3" or "ห้อง 3" vs ["3", "5"])
-          if (!hwRooms.includes('All')) {
-            if (studentRoom && studentRoom !== '-') {
-              const hasExactMatch = hwRooms.includes(studentRoom);
-              const hasCleanMatch = cleanStudentRoom && cleanHwRooms.includes(cleanStudentRoom);
-              if (!hasExactMatch && !hasCleanMatch) {
-                return false;
-              }
-            }
-          }
-          return true;
-        });
-      }
-
-      if (this.selectedCourseId !== 'All') {
-        visibleHomework = visibleHomework.filter(hw => hw && hw.courseId === this.selectedCourseId);
-      }
+    if (this.selectedCourseId !== 'All') {
+      visibleHomework = visibleHomework.filter(hw => hw.courseId === this.selectedCourseId);
+    }
 
     containerEl.innerHTML = `
       <div id="hw-module-container" class="space-y-8 animate-fade-in">
@@ -195,21 +155,8 @@ export class HomeworkModule {
           </h3>
 
           ${visibleHomework.length === 0 ? `
-            <div class="glass-card p-8 sm:p-12 text-center rounded-3xl bg-white border border-slate-200 space-y-3">
-              <div class="text-3xl">📭</div>
-              <div class="text-sm font-bold font-heading text-slate-700">
-                ${currentUser.role === 'Student' ? 'ไม่มีการบ้านที่มอบหมายสำหรับระดับชั้นและห้องเรียนของคุณในขณะนี้' : 'ไม่พบรายการการบ้านในวิชานี้'}
-              </div>
-              ${currentUser.role === 'Student' ? `
-                <div class="inline-flex flex-wrap items-center justify-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl text-xs text-slate-600 font-heading">
-                  <span>👤 ข้อมูลชั้นเรียนของคุณในระบบ:</span>
-                  <span class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 font-mono">
-                    ${(studentGrade && studentGrade !== '-') ? studentGrade : 'ไม่ระบุชั้น'} 
-                    ${(studentRoom && studentRoom !== '-') ? `(ห้อง ${studentRoom})` : '(ไม่ระบุห้อง)'}
-                  </span>
-                </div>
-                <p class="text-[11px] text-slate-400 italic">*(หากห้องเรียนไม่ตรง สามารถแจ้งคุณครูหรือแอดมินให้เปลี่ยนห้องในเมนูจัดการผู้ใช้ได้ครับ)*</p>
-              ` : ''}
+            <div class="glass-card p-12 text-center text-slate-400 rounded-3xl bg-white border border-slate-200">
+              ${currentUser.role === 'Student' ? 'ไม่มีการบ้านที่มอบหมายสำหรับห้องเรียนของคุณในขณะนี้' : 'ไม่พบรายการการบ้านในวิชานี้'}
             </div>
           ` : visibleHomework.map(hw => {
             const rawSubs = hw.submissions || [];
@@ -473,16 +420,6 @@ export class HomeworkModule {
         }
       });
     });
-    } catch (err) {
-      console.error('HomeworkModule render exception caught:', err);
-      containerEl.innerHTML = `
-        <div class="glass-card p-8 sm:p-12 text-center rounded-3xl bg-white border border-slate-200 space-y-4 animate-fade-in">
-          <div class="text-4xl">⚡</div>
-          <div class="text-lg font-bold font-heading text-slate-800">กำลังรีเฟรชข้อมูลรายวิชาและการบ้าน...</div>
-          <p class="text-xs text-slate-500 font-heading">ระบบกำลังซิงก์ข้อมูลจากเซิร์ฟเวอร์หลัก กรุณารอแปปเดียวครับ</p>
-        </div>
-      `;
-    }
   }
 
   showCourseModal(targetCourse, refreshCb) {

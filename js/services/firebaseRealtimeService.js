@@ -97,22 +97,7 @@ class FirebaseRealtimeService {
           }
 
           // Save exact server array state (even if empty `[]`)
-          try {
-            localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
-          } catch (storageErr) {
-            console.warn(`LocalStorage quota warning for collection ag_${key}:`, storageErr);
-            if (key === 'users' && Array.isArray(itemsArray)) {
-              const cleanedUsers = itemsArray.map(u => {
-                if (u.avatar && u.avatar.length > 500 && u.avatar.startsWith('data:image')) {
-                  return { ...u, avatar: (u.role === 'Admin' ? '👑' : u.role === 'Teacher' ? '👨‍🏫' : '🎓') };
-                }
-                return u;
-              });
-              try {
-                localStorage.setItem('ag_users', JSON.stringify(cleanedUsers));
-              } catch (e2) {}
-            }
-          }
+          localStorage.setItem('ag_' + key, JSON.stringify(itemsArray));
           
           // Broadcast live update to refresh active UI across all connected devices
           window.dispatchEvent(new CustomEvent('ag_realtime_update', {
