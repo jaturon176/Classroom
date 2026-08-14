@@ -349,7 +349,7 @@ class FirebaseRealtimeService {
     return true;
   }
 
-  // 🎯 ATOMIC HOMEWORK SUBMISSION (Prevents overwriting submissions when multiple students submit together)
+  // 🎯 ATOMIC & GUARANTEED HOMEWORK SUBMISSION
   async addHomeworkSubmission(hwId, newSubmission) {
     try {
       const cleanSub = this.sanitizeForFirebase(newSubmission);
@@ -374,20 +374,20 @@ class FirebaseRealtimeService {
           hw.submissions = tempMap;
         }
         hw.submissions[subKey] = cleanSub;
-        localStorage.setItem('ag_homework', JSON.stringify(items));
+
+        // Guaranteed push to Central Firebase Realtime DB Server
+        this.saveCollection('homework', items);
 
         window.dispatchEvent(new CustomEvent('ag_realtime_update', {
           detail: { collection: 'homework', items: items }
         }));
       }
 
-      // 2. Write ATOMICALLY to specific child key in Firebase DB (Never overwrites other students!)
+      // 2. Write ATOMICALLY to specific child key in Firebase DB as secondary push
       if (this.isRealtimeConnected && this.db) {
         const cleanHwId = String(hwId).replace(/[\/\.\#\$\/\[\]]/g, '_');
         const subRef = ref(this.db, `homework/${cleanHwId}/submissions/${subKey}`);
         await set(subRef, cleanSub).catch(err => console.warn('Realtime addHomeworkSubmission error:', err));
-        
-        // Touch parent homework node to trigger onValue listener for all connected clients instantly
         await update(ref(this.db, `homework/${cleanHwId}`), { _lastSubmissionAt: Date.now() }).catch(() => {});
       }
     } catch (err) {
