@@ -146,9 +146,14 @@ export class HomeworkModule {
       visibleHomework = visibleHomework.filter(hw => {
         if (hw.courseId === this.selectedCourseId) return true;
         if (activeSelectedCourse) {
-          if (hw.courseName === activeSelectedCourse.name || hw.courseCode === activeSelectedCourse.code) return true;
-          if (hw.courseName && (hw.courseName.includes(activeSelectedCourse.code) || hw.courseName.includes(activeSelectedCourse.name))) return true;
-          if (activeSelectedCourse.name && activeSelectedCourse.name.includes(hw.courseName)) return true;
+          const cleanCourseCode = (activeSelectedCourse.code || '').trim().toLowerCase();
+          const cleanCourseName = (activeSelectedCourse.name || '').replace(/\(.*\)/g, '').trim().toLowerCase();
+          const hwName = decodeMojibakeThai(hw.courseName || '').trim().toLowerCase();
+          const hwCode = decodeMojibakeThai(hw.courseCode || '').trim().toLowerCase();
+
+          if (cleanCourseCode && (hwCode === cleanCourseCode || hwName.includes(cleanCourseCode))) return true;
+          if (cleanCourseName && hwName && (hwName === cleanCourseName || hwName.includes(cleanCourseName) || cleanCourseName.includes(hwName))) return true;
+          if (activeSelectedCourse.name && activeSelectedCourse.name.toLowerCase().includes(hwName)) return true;
         }
         return false;
       });
