@@ -101,36 +101,54 @@ export class RBACModule {
     return this.currentUser && ['Admin', 'Teacher'].includes(this.currentUser.role);
   }
 
-  // Authentication Logic (with Fail-Safe Initial Users Fallback)
+  // Authentication Logic (with Multi-Candidate Search & Fail-Safe Fallback)
   login(loginInput, password) {
     let users = firebaseService.getCollection('users');
-    const input = loginInput.trim().toLowerCase();
+    const input = String(loginInput || '').trim().toLowerCase();
+    const inputPass = String(password || '').trim();
 
-    let user = users.find(u => 
-      (u.username && u.username.toLowerCase() === input) ||
-      (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
-      (u.email && u.email.toLowerCase() === input)
+    if (!input) {
+      return { success: false, message: 'กรุณากรอกชื่อผู้ใช้ หรือ รหัสนักเรียน' };
+    }
+
+    // Search all candidate user accounts matching username, studentId, email, or name
+    let candidates = users.filter(u => 
+      (u.username && String(u.username).trim().toLowerCase() === input) ||
+      (u.studentId && u.studentId !== '-' && String(u.studentId).trim().toLowerCase() === input) ||
+      (u.email && String(u.email).trim().toLowerCase() === input) ||
+      (u.name && decodeMojibakeThai(u.name).trim().toLowerCase() === input)
     );
 
-    if (!user) {
-      user = INITIAL_USERS.find(u => 
-        (u.username && u.username.toLowerCase() === input) ||
-        (u.studentId && u.studentId !== '-' && u.studentId.toLowerCase() === input) ||
-        (u.email && u.email.toLowerCase() === input)
+    if (candidates.length === 0) {
+      candidates = INITIAL_USERS.filter(u => 
+        (u.username && String(u.username).trim().toLowerCase() === input) ||
+        (u.studentId && u.studentId !== '-' && String(u.studentId).trim().toLowerCase() === input) ||
+        (u.email && String(u.email).trim().toLowerCase() === input) ||
+        (u.name && decodeMojibakeThai(u.name).trim().toLowerCase() === input)
       );
     }
 
-    if (!user) {
+    if (candidates.length === 0) {
       return { success: false, message: 'ไม่พบบัญชีผู้ใช้นี้ในระบบ' };
     }
 
-    const validPassword = user.password || user.studentId || '123456';
-    if (password !== validPassword && password !== '123456') {
-      return { success: false, message: 'รหัสผ่านไม่ถูกต้อง (สำหรับนักเรียนรหัสผ่านเริ่มต้นคือ รหัสนักเรียน)' };
+    // 1. Prioritize finding the exact candidate matching inputPass
+    let matchedUser = candidates.find(u => {
+      const validPass = String(u.password || u.studentId || '123456').trim();
+      return validPass === inputPass || inputPass === '123456';
+    });
+
+    // 2. Fallback to first candidate if no exact password match
+    if (!matchedUser) {
+      matchedUser = candidates[0];
+      const validPass = String(matchedUser.password || matchedUser.studentId || '123456').trim();
+      if (inputPass !== validPass && inputPass !== '123456') {
+        return { success: false, message: 'รหัสผ่านไม่ถูกต้อง (สำหรับนักเรียนรหัสผ่านเริ่มต้นคือ รหัสนักเรียน)' };
+      }
     }
 
-    this.saveUser(user);
-    return { success: true, user };
+    this.saveUser(matchedUser);
+    return { success: true, user: matchedUser };
   }
 
   quickLogin(role) {
