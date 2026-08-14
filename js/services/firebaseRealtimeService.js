@@ -58,6 +58,27 @@ class FirebaseRealtimeService {
           return typeof resObj === 'object' && resObj !== null ? { id: rk, ...resObj } : resObj;
         });
     }
+    // Normalize homework submissions map -> clean map if stored as child keys in Firebase Realtime DB
+    if (item.submissions && typeof item.submissions === 'object') {
+      if (Array.isArray(item.submissions)) {
+        const map = {};
+        item.submissions.forEach(s => {
+          if (s && (s.studentId || s.studentName)) {
+            const k = String(s.studentId || s.studentName).replace(/[\/\.\#\$\/\[\]]/g, '_');
+            map[k] = s;
+          }
+        });
+        item.submissions = map;
+      } else {
+        const cleanMap = {};
+        Object.keys(item.submissions)
+          .filter(sk => sk !== '_placeholder' && sk !== '_empty')
+          .forEach(sk => {
+            cleanMap[sk] = item.submissions[sk];
+          });
+        item.submissions = cleanMap;
+      }
+    }
     return item;
   }
 
@@ -365,6 +386,9 @@ class FirebaseRealtimeService {
         const cleanHwId = String(hwId).replace(/[\/\.\#\$\/\[\]]/g, '_');
         const subRef = ref(this.db, `homework/${cleanHwId}/submissions/${subKey}`);
         await set(subRef, cleanSub).catch(err => console.warn('Realtime addHomeworkSubmission error:', err));
+        
+        // Touch parent homework node to trigger onValue listener for all connected clients instantly
+        await update(ref(this.db, `homework/${cleanHwId}`), { _lastSubmissionAt: Date.now() }).catch(() => {});
       }
     } catch (err) {
       console.warn('addHomeworkSubmission exception caught safely:', err);
