@@ -60,15 +60,24 @@ export class HomeworkModule {
     // Filter homework by role & target class/room
     let visibleHomework = homeworkList;
 
+    const cleanCourseTitle = (name) => {
+      if (!name) return '';
+      const decoded = decodeMojibakeThai(name);
+      return decoded.replace(/\(.*\)/g, '').replace(/[^a-zA-Z0-9\u0E00-\u0E7F]/g, '').trim().toLowerCase();
+    };
+
     if (currentUser.role === 'Teacher') {
       const curName = decodeMojibakeThai(currentUser.name).trim().toLowerCase();
       visibleHomework = homeworkList.filter(hw => {
-        // 1. Direct course match with visible teacher courses
-        const isMyCourse = visibleCourses.some(c => 
-          c.id === hw.courseId || 
-          (c.code && hw.courseCode && c.code === hw.courseCode) ||
-          (c.name && hw.courseName && (c.name === hw.courseName || hw.courseName.includes(c.name) || c.name.includes(hw.courseName)))
-        );
+        // 1. Direct course match with visible teacher courses (using clean course title matcher)
+        const isMyCourse = visibleCourses.some(c => {
+          if (c.id === hw.courseId) return true;
+          if (c.code && hw.courseCode && c.code.toLowerCase() === hw.courseCode.toLowerCase()) return true;
+          const cNameClean = cleanCourseTitle(c.name);
+          const hwNameClean = cleanCourseTitle(hw.courseName);
+          if (cNameClean && hwNameClean && (cNameClean === hwNameClean || cNameClean.includes(hwNameClean) || hwNameClean.includes(cNameClean))) return true;
+          return false;
+        });
         if (isMyCourse) return true;
 
         // 2. Direct teacher/author field match
@@ -147,13 +156,12 @@ export class HomeworkModule {
         if (hw.courseId === this.selectedCourseId) return true;
         if (activeSelectedCourse) {
           const cleanCourseCode = (activeSelectedCourse.code || '').trim().toLowerCase();
-          const cleanCourseName = (activeSelectedCourse.name || '').replace(/\(.*\)/g, '').trim().toLowerCase();
-          const hwName = decodeMojibakeThai(hw.courseName || '').trim().toLowerCase();
-          const hwCode = decodeMojibakeThai(hw.courseCode || '').trim().toLowerCase();
+          const cleanCourseName = cleanCourseTitle(activeSelectedCourse.name);
+          const hwNameClean = cleanCourseTitle(hw.courseName);
+          const hwCodeClean = (hw.courseCode || '').trim().toLowerCase();
 
-          if (cleanCourseCode && (hwCode === cleanCourseCode || hwName.includes(cleanCourseCode))) return true;
-          if (cleanCourseName && hwName && (hwName === cleanCourseName || hwName.includes(cleanCourseName) || cleanCourseName.includes(hwName))) return true;
-          if (activeSelectedCourse.name && activeSelectedCourse.name.toLowerCase().includes(hwName)) return true;
+          if (cleanCourseCode && (hwCodeClean === cleanCourseCode || hwNameClean.includes(cleanCourseCode))) return true;
+          if (cleanCourseName && hwNameClean && (cleanCourseName === hwNameClean || cleanCourseName.includes(hwNameClean) || hwNameClean.includes(cleanCourseName))) return true;
         }
         return false;
       });
