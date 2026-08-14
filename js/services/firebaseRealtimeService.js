@@ -328,6 +328,40 @@ class FirebaseRealtimeService {
     return true;
   }
 
+  // 🎯 ATOMIC HOMEWORK SUBMISSION (Prevents overwriting submissions when multiple students submit together)
+  async addHomeworkSubmission(hwId, newSubmission) {
+    const cleanSub = this.sanitizeForFirebase(newSubmission);
+    const subKey = newSubmission.studentId || ('sub_' + Date.now() + '_' + Math.random().toString(36).substr(2,4));
+
+    // 1. Update local cache immediately
+    const items = this.getCollection('homework');
+    const hw = items.find(h => h.id === hwId);
+    if (hw) {
+      if (!hw.submissions || typeof hw.submissions !== 'object') {
+        hw.submissions = {};
+      }
+      if (Array.isArray(hw.submissions)) {
+        const tempMap = {};
+        hw.submissions.forEach(s => {
+          if (s && s.studentId) tempMap[s.studentId] = s;
+        });
+        hw.submissions = tempMap;
+      }
+      hw.submissions[subKey] = cleanSub;
+      localStorage.setItem('ag_homework', JSON.stringify(items));
+
+      window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+        detail: { collection: 'homework', items: items }
+      }));
+    }
+
+    // 2. Write ATOMICALLY to specific child key in Firebase DB (Never overwrites other students!)
+    if (this.isRealtimeConnected && this.db) {
+      const subRef = ref(this.db, `homework/${hwId}/submissions/${subKey}`);
+      await set(subRef, cleanSub).catch(err => console.warn('Realtime addHomeworkSubmission error:', err));
+    }
+  }
+
   // 🎯 ATOMIC QUIZ RESULT SUBMISSION (Prevents overwriting scores when multiple students submit together)
   async addQuizResult(quizId, newResult) {
     const cleanResult = this.sanitizeForFirebase(newResult);

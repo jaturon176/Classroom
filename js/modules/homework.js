@@ -256,10 +256,20 @@ export class HomeworkModule {
               ` : ''}
             </div>
           ` : visibleHomework.map(hw => {
-            const rawSubs = hw.submissions || [];
-            const submissionsList = Array.isArray(rawSubs) ? rawSubs : Object.values(rawSubs);
-            const validSubmissions = submissionsList.filter(s => s && typeof s === 'object');
-            const mySubmission = validSubmissions.find(s => s.studentId === currentUser.studentId);
+            const rawSubs = hw.submissions || {};
+            let submissionsList = [];
+            if (Array.isArray(rawSubs)) {
+              submissionsList = rawSubs;
+            } else if (typeof rawSubs === 'object' && rawSubs !== null) {
+              submissionsList = Object.keys(rawSubs)
+                .filter(k => k !== '_placeholder' && k !== '_empty')
+                .map(k => rawSubs[k]);
+            }
+            const validSubmissions = submissionsList.filter(s => s && typeof s === 'object' && (s.studentId || s.studentName || s.textResponse || s.imageFile));
+            const mySubmission = validSubmissions.find(s => 
+              (s.studentId && currentUser.studentId && s.studentId === currentUser.studentId) ||
+              (s.studentName && currentUser.name && s.studentName === currentUser.name)
+            );
             const submissionCount = validSubmissions.length;
             
             const targetGradeStr = hw.targetGrade && hw.targetGrade !== 'All' ? hw.targetGrade : 'ทุกชั้น';
@@ -1470,8 +1480,12 @@ export class HomeworkModule {
       const mins = String(now.getMinutes()).padStart(2, '0');
       const localTimeString = `${year}-${month}-${day} ${hours}:${mins}`;
 
+      const subStudentId = currentUser.studentId && currentUser.studentId !== '-' 
+        ? currentUser.studentId 
+        : (currentUser.username || ('std_' + Date.now()));
+
       const newSub = {
-        studentId: currentUser.studentId || 'STD6701',
+        studentId: subStudentId,
         studentName: currentUser.name,
         submittedAt: localTimeString,
         textResponse: document.getElementById('sub-text').value.trim(),
@@ -1481,9 +1495,7 @@ export class HomeworkModule {
         status: existing ? (existing.status || 'Pending') : 'Pending'
       };
 
-      subsMap[currentUser.studentId] = newSub;
-
-      firebaseService.updateItem('homework', hw.id, { submissions: subsMap });
+      firebaseService.addHomeworkSubmission(hw.id, newSub);
       modalEl.remove();
       refreshCb();
     });
@@ -1495,8 +1507,15 @@ export class HomeworkModule {
     const hw = allHw.find(h => h.id === targetHw.id) || targetHw;
     
     const rawSubs = hw.submissions || {};
-    let submissions = Array.isArray(rawSubs) ? [...rawSubs] : Object.values(rawSubs);
-    submissions = submissions.filter(s => s && typeof s === 'object');
+    let submissionsList = [];
+    if (Array.isArray(rawSubs)) {
+      submissionsList = rawSubs;
+    } else if (typeof rawSubs === 'object' && rawSubs !== null) {
+      submissionsList = Object.keys(rawSubs)
+        .filter(k => k !== '_placeholder' && k !== '_empty')
+        .map(k => rawSubs[k]);
+    }
+    const submissions = submissionsList.filter(s => s && typeof s === 'object' && (s.studentId || s.studentName || s.textResponse || s.imageFile));
 
     const gradedCount = submissions.filter(s => s.status === 'Graded').length;
     const pendingCount = submissions.length - gradedCount;
