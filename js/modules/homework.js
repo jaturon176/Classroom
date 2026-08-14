@@ -66,28 +66,9 @@ export class HomeworkModule {
       return decoded.replace(/\(.*\)/g, '').replace(/[^a-zA-Z0-9\u0E00-\u0E7F]/g, '').trim().toLowerCase();
     };
 
-    if (currentUser.role === 'Teacher') {
-      const curName = decodeMojibakeThai(currentUser.name).trim().toLowerCase();
-      visibleHomework = homeworkList.filter(hw => {
-        // 1. Direct course match with visible teacher courses (using clean course title matcher)
-        const isMyCourse = visibleCourses.some(c => {
-          if (c.id === hw.courseId) return true;
-          if (c.code && hw.courseCode && c.code.toLowerCase() === hw.courseCode.toLowerCase()) return true;
-          const cNameClean = cleanCourseTitle(c.name);
-          const hwNameClean = cleanCourseTitle(hw.courseName);
-          if (cNameClean && hwNameClean && (cNameClean === hwNameClean || cNameClean.includes(hwNameClean) || hwNameClean.includes(cNameClean))) return true;
-          return false;
-        });
-        if (isMyCourse) return true;
-
-        // 2. Direct teacher/author field match
-        const hwTeacher = hw.teacher ? decodeMojibakeThai(hw.teacher).trim().toLowerCase() : '';
-        const hwAuthor = hw.author ? decodeMojibakeThai(hw.author).trim().toLowerCase() : '';
-        const matchesTeacher = (hwTeacher && (hwTeacher === curName || hwTeacher.includes(curName))) ||
-                               (hwAuthor && (hwAuthor === curName || hwAuthor.includes(curName)));
-
-        return matchesTeacher || !hw.courseId;
-      });
+    if (currentUser.role === 'Teacher' || currentUser.role === 'Admin') {
+      // Teachers and Admins see ALL homework in the system to ensure no assignments are lost
+      visibleHomework = homeworkList;
     } else if (currentUser.role === 'Student') {
       visibleHomework = homeworkList.filter(hw => {
         const tGrade = hw.targetGrade || 'All';
@@ -162,6 +143,7 @@ export class HomeworkModule {
 
           if (cleanCourseCode && (hwCodeClean === cleanCourseCode || hwNameClean.includes(cleanCourseCode))) return true;
           if (cleanCourseName && hwNameClean && (cleanCourseName === hwNameClean || cleanCourseName.includes(hwNameClean) || hwNameClean.includes(cleanCourseName))) return true;
+          if (!hw.courseId && !hw.courseName) return true; // Allow unassigned homework to be visible
         }
         return false;
       });
