@@ -1454,50 +1454,65 @@ export class HomeworkModule {
 
     modalEl.querySelectorAll('#close-sub-modal, #close-sub-btn').forEach(b => b.addEventListener('click', () => modalEl.remove()));
 
-    modalEl.querySelector('#sub-form').addEventListener('submit', (e) => {
+    modalEl.querySelector('#sub-form').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const allHw = firebaseService.getCollection('homework');
-      const activeHw = allHw.find(h => h.id === hw.id) || hw;
-
-      const rawSubs = activeHw.submissions || {};
-      let subsMap = {};
-      
-      if (Array.isArray(rawSubs)) {
-        rawSubs.forEach(s => {
-          if (s && s.studentId) subsMap[s.studentId] = s;
-        });
-      } else if (typeof rawSubs === 'object') {
-        Object.assign(subsMap, rawSubs);
+      const submitBtn = modalEl.querySelector('#btn-submit-hw-now');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span>⏳</span> กำลังบันทึกการส่งงาน...`;
       }
 
-      const existing = subsMap[currentUser.studentId];
+      try {
+        const allHw = firebaseService.getCollection('homework');
+        const activeHw = allHw.find(h => h.id === hw.id) || hw;
 
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const hours = String(now.getHours()).padStart(2, '0');
-      const mins = String(now.getMinutes()).padStart(2, '0');
-      const localTimeString = `${year}-${month}-${day} ${hours}:${mins}`;
+        const rawSubs = activeHw.submissions || {};
+        let subsMap = {};
+        
+        if (Array.isArray(rawSubs)) {
+          rawSubs.forEach(s => {
+            if (s && (s.studentId || s.studentName)) {
+              const k = s.studentId || s.studentName;
+              subsMap[k] = s;
+            }
+          });
+        } else if (typeof rawSubs === 'object') {
+          Object.assign(subsMap, rawSubs);
+        }
 
-      const subStudentId = currentUser.studentId && currentUser.studentId !== '-' 
-        ? currentUser.studentId 
-        : (currentUser.username || ('std_' + Date.now()));
+        const studentKey = currentUser.studentId && currentUser.studentId !== '-' ? currentUser.studentId : currentUser.username;
+        const existing = subsMap[studentKey] || (currentUser.name ? Object.values(subsMap).find(s => s.studentName === currentUser.name) : null);
 
-      const newSub = {
-        studentId: subStudentId,
-        studentName: currentUser.name,
-        submittedAt: localTimeString,
-        textResponse: document.getElementById('sub-text').value.trim(),
-        imageFile: uploadedImageUrl,
-        score: existing && existing.score !== undefined ? existing.score : null,
-        feedback: existing ? (existing.feedback || '') : '',
-        status: existing ? (existing.status || 'Pending') : 'Pending'
-      };
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const mins = String(now.getMinutes()).padStart(2, '0');
+        const localTimeString = `${year}-${month}-${day} ${hours}:${mins}`;
 
-      firebaseService.addHomeworkSubmission(hw.id, newSub);
-      modalEl.remove();
-      refreshCb();
+        const subStudentId = currentUser.studentId && currentUser.studentId !== '-' 
+          ? currentUser.studentId 
+          : (currentUser.username || ('std_' + Date.now()));
+
+        const newSub = {
+          studentId: subStudentId,
+          studentName: currentUser.name,
+          submittedAt: localTimeString,
+          textResponse: document.getElementById('sub-text').value.trim(),
+          imageFile: uploadedImageUrl,
+          score: existing && existing.score !== undefined ? existing.score : null,
+          feedback: existing ? (existing.feedback || '') : '',
+          status: existing ? (existing.status || 'Pending') : 'Pending'
+        };
+
+        await firebaseService.addHomeworkSubmission(hw.id, newSub);
+      } catch (err) {
+        console.warn('Submission submit error handled:', err);
+      } finally {
+        modalEl.remove();
+        refreshCb();
+      }
     });
   }
 

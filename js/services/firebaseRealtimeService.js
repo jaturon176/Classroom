@@ -330,35 +330,44 @@ class FirebaseRealtimeService {
 
   // 🎯 ATOMIC HOMEWORK SUBMISSION (Prevents overwriting submissions when multiple students submit together)
   async addHomeworkSubmission(hwId, newSubmission) {
-    const cleanSub = this.sanitizeForFirebase(newSubmission);
-    const subKey = newSubmission.studentId || ('sub_' + Date.now() + '_' + Math.random().toString(36).substr(2,4));
+    try {
+      const cleanSub = this.sanitizeForFirebase(newSubmission);
+      const rawSubKey = newSubmission.studentId || ('sub_' + Date.now() + '_' + Math.random().toString(36).substr(2,4));
+      const subKey = String(rawSubKey).replace(/[\/\.\#\$\/\[\]]/g, '_').trim();
 
-    // 1. Update local cache immediately
-    const items = this.getCollection('homework');
-    const hw = items.find(h => h.id === hwId);
-    if (hw) {
-      if (!hw.submissions || typeof hw.submissions !== 'object') {
-        hw.submissions = {};
+      // 1. Update local cache immediately
+      const items = this.getCollection('homework');
+      const hw = items.find(h => h.id === hwId);
+      if (hw) {
+        if (!hw.submissions || typeof hw.submissions !== 'object') {
+          hw.submissions = {};
+        }
+        if (Array.isArray(hw.submissions)) {
+          const tempMap = {};
+          hw.submissions.forEach(s => {
+            if (s && (s.studentId || s.studentName)) {
+              const k = String(s.studentId || s.studentName).replace(/[\/\.\#\$\/\[\]]/g, '_');
+              tempMap[k] = s;
+            }
+          });
+          hw.submissions = tempMap;
+        }
+        hw.submissions[subKey] = cleanSub;
+        localStorage.setItem('ag_homework', JSON.stringify(items));
+
+        window.dispatchEvent(new CustomEvent('ag_realtime_update', {
+          detail: { collection: 'homework', items: items }
+        }));
       }
-      if (Array.isArray(hw.submissions)) {
-        const tempMap = {};
-        hw.submissions.forEach(s => {
-          if (s && s.studentId) tempMap[s.studentId] = s;
-        });
-        hw.submissions = tempMap;
+
+      // 2. Write ATOMICALLY to specific child key in Firebase DB (Never overwrites other students!)
+      if (this.isRealtimeConnected && this.db) {
+        const cleanHwId = String(hwId).replace(/[\/\.\#\$\/\[\]]/g, '_');
+        const subRef = ref(this.db, `homework/${cleanHwId}/submissions/${subKey}`);
+        await set(subRef, cleanSub).catch(err => console.warn('Realtime addHomeworkSubmission error:', err));
       }
-      hw.submissions[subKey] = cleanSub;
-      localStorage.setItem('ag_homework', JSON.stringify(items));
-
-      window.dispatchEvent(new CustomEvent('ag_realtime_update', {
-        detail: { collection: 'homework', items: items }
-      }));
-    }
-
-    // 2. Write ATOMICALLY to specific child key in Firebase DB (Never overwrites other students!)
-    if (this.isRealtimeConnected && this.db) {
-      const subRef = ref(this.db, `homework/${hwId}/submissions/${subKey}`);
-      await set(subRef, cleanSub).catch(err => console.warn('Realtime addHomeworkSubmission error:', err));
+    } catch (err) {
+      console.warn('addHomeworkSubmission exception caught safely:', err);
     }
   }
 
