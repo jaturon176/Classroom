@@ -442,7 +442,12 @@ class FirebaseRealtimeService {
     }
   }
 
-  // Helper method to sanitize object before sending to Firebase
+  sanitizeKey(key) {
+    if (!key) return '_empty';
+    return String(key).replace(/[\/\.\#\$\/\[\]]/g, '_').trim();
+  }
+
+  // Helper method to sanitize object and all keys before sending to Firebase
   sanitizeForFirebase(obj) {
     if (obj === undefined) return '';
     if (obj === null) return '';
@@ -453,7 +458,8 @@ class FirebaseRealtimeService {
       const clean = {};
       for (const k in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, k)) {
-          clean[k] = this.sanitizeForFirebase(obj[k]);
+          const safeKey = this.sanitizeKey(k);
+          clean[safeKey] = this.sanitizeForFirebase(obj[k]);
         }
       }
       return clean;
